@@ -1,0 +1,24 @@
+{
+  "name": "@huella/client",
+  "version": "3.5.0",
+  "private": true,
+  "type": "module",
+  "description": "Interfaz web (React + Vite + Tailwind CSS) de la Calculadora de Huella de Carbono.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@huella/shared": "*",
+    "lucide-react": "^1.53.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@vitejs/plugin-react": "^6.1.1",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.3.0"
+  }
+}

@@ -1,0 +1,18 @@
+services:
+  app:
+    build: .
+    image: huella-carbono:latest
+    container_name: huella-carbono
+    restart: unless-stopped
+    init: true
+    # Tiempo para que terminen los correos en curso antes de que Docker fuerce el cierre (por defecto son 10 s).
+    stop_grace_period: 40s
+    env_file:
+      - ./server/.env
+    environment:
+      PORT: "3001"
+      SERVE_CLIENT: "true"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "3001:3001"

@@ -1,0 +1,28 @@
+# Dependencias
+node_modules/
+
+# Resultados de compilación y pruebas
+dist/
+build/
+coverage/
+*.tsbuildinfo
+
+# Configuracion
+.env
+.env.*
+!.env.ejemplo
+
+# Vista previa de correos generada por el servidor en modo dry-run
+.dry-run/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.swp

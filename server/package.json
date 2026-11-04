@@ -1,0 +1,28 @@
+{
+  "name": "@huella/server",
+  "version": "3.5.0",
+  "private": true,
+  "type": "module",
+  "description": "API de la Calculadora de Huella de Carbono: guarda las participaciones en MySQL, calcula los resultados y los envía por correo rotando cuentas de Gmail.",
+  "main": "src/index.js",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@huella/shared": "*",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.8",
+    "exceljs": "^4.4.0",
+    "express": "^5.3.0",
+    "express-rate-limit": "^8.7.1",
+    "helmet": "^8.3.0",
+    "mysql2": "^3.24.6",
+    "nodemailer": "^10.1.1",
+    "pdfkit": "^0.20.2"
+  }
+}

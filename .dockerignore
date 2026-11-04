@@ -1,0 +1,28 @@
+.git
+.gitignore
+.gitattributes
+.dockerignore
+Dockerfile
+docker-compose.yml
+
+# Dependencias y compilados (se reconstruyen dentro de la imagen)
+**/node_modules
+client/dist
+**/dist
+**/coverage
+
+# Secretos: el contenedor los recibe por env_file, nunca dentro de la imagen
+**/.env
+**/.env.*
+!**/.env.ejemplo
+server/.dry-run
+
+README.md
+database
+eslint.config.js
+server/test
+**/*.log
+.vscode
+.idea
+.DS_Store
+Thumbs.db

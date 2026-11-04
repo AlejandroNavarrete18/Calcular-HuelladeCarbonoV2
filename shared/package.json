@@ -1,0 +1,10 @@
+{
+  "name": "@huella/shared",
+  "version": "3.5.0",
+  "private": true,
+  "type": "module",
+  "description": "Dominio compartido: cuestionario, validación de respuestas y cálculo de la huella de carbono",
+  "exports": {
+    ".": "./src/index.js"
+  }
+}

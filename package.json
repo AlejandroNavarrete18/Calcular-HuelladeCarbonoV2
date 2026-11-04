@@ -1,0 +1,32 @@
+{
+  "name": "calcular-huella-de-carbono",
+  "version": "3.5.0",
+  "private": true,
+  "type": "module",
+  "description": "Calculadora de huella de carbono UAS",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "workspaces": [
+    "shared",
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n server,client -c yellow,cyan \"npm:dev:server\" \"npm:dev:client\"",
+    "dev:client": "npm run dev -w client",
+    "dev:server": "npm run dev -w server",
+    "build": "npm run build -w client",
+    "start": "npm run start -w server",
+    "lint": "eslint .",
+    "check": "npm run lint && npm run build"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "concurrently": "^10.0.6",
+    "eslint": "^10.10.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.6",
+    "globals": "^17.12.0"
+  }
+}
