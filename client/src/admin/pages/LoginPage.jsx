@@ -139,7 +139,7 @@ export default function LoginPage({ notice, onLoggedIn }) {
           </button>
 
           <div className="flex justify-center border-t border-navy-100 pt-4 text-sm">
-            <a href="/" className="inline-flex min-h-10 items-center gap-1.5 font-bold text-navy-700 hover:underline">
+            <a href="/huella_carbono" className="inline-flex min-h-10 items-center gap-1.5 font-bold text-navy-700 hover:underline">
               <ArrowLeft className="h-4 w-4" aria-hidden="true" />
               Ir a la calculadora
             </a>

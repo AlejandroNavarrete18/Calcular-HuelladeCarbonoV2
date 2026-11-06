@@ -7,6 +7,11 @@ const RUTA_FUENTE = fileURLToPath(new URL('../../../assets/fonts/DejaVuSans.ttf'
 const RUTA_FUENTE_NEGRITA = fileURLToPath(new URL('../../../assets/fonts/DejaVuSans-Bold.ttf', import.meta.url));
 const RUTA_LOGO_UAS = fileURLToPath(new URL('../../../assets/email/logo-uas.png', import.meta.url));
 const RUTA_LOGO_BIENESTAR = fileURLToPath(new URL('../../../assets/email/logo-bienestar.png', import.meta.url));
+const RUTA_LOGO_SUSTENTABILIDAD = fileURLToPath(new URL('../../../assets/email/logo-sustentabilidad.png', import.meta.url));
+
+// Logos del encabezado, de izquierda a derecha.
+const RUTAS_LOGOS = Object.freeze([RUTA_LOGO_BIENESTAR, RUTA_LOGO_UAS, RUTA_LOGO_SUSTENTABILIDAD]);
+const SEPARACION_LOGOS = 8;
 
 const FUENTE = 'Sans';
 const FUENTE_NEGRITA = 'Sans-Bold';
@@ -103,10 +108,16 @@ function dibujarEncabezado(doc, { compacto, generadoEn }) {
     altoLogo = 26;
   }
   const y = 16;
-  doc.image(RUTA_LOGO_BIENESTAR, MARGEN, y, { height: altoLogo });
-  doc.image(RUTA_LOGO_UAS, MARGEN + altoLogo * 1.18 + 8, y, { height: altoLogo });
 
-  const xTexto = MARGEN + altoLogo * 1.18 + altoLogo * 0.78 + 22;
+  // Los logos se colocan uno tras otro en la misma fila; el ancho de cada uno sale de la proporción real de su imagen.
+  let xLogo = MARGEN;
+  for (const ruta of RUTAS_LOGOS) {
+    const imagen = doc.openImage(ruta);
+    doc.image(imagen, xLogo, y, { height: altoLogo });
+    xLogo += (imagen.width / imagen.height) * altoLogo + SEPARACION_LOGOS;
+  }
+
+  const xTexto = xLogo + 14;
   doc.font(FUENTE_NEGRITA).fontSize(7).fillColor(COLOR.sun600);
   doc.text('UNIVERSIDAD AUTÓNOMA DE SINALOA', xTexto, y + 2, { lineBreak: false, characterSpacing: 1 });
   doc.font(FUENTE_NEGRITA).fillColor(COLOR.navy900);

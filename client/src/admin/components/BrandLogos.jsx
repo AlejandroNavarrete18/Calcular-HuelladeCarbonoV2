@@ -2,12 +2,14 @@ import logoUas from '../../assets/images/logo-uas.png';
 import logoBienestar from '../../assets/images/logo-bienestar.png';
 import logoFic from '../../assets/images/logo-fic.jpg';
 import logoUas29 from '../../assets/images/logo-uas-29.jpg';
+import logoSustentabilidad from '../../assets/images/logo-sustentabilidad.png';
 
 const LOGOS = Object.freeze([
   { src: logoFic, alt: 'Facultad de Informática' },
   { src: logoBienestar, alt: 'Bienestar Universitario' },
   { src: logoUas29, alt: 'UAS 29' },
   { src: logoUas, alt: 'Escudo de la Universidad Autónoma de Sinaloa' },
+  { src: logoSustentabilidad, alt: 'Logo Sustentabilidad' },
 ]);
 
 // Los cuatro logos institucionales
