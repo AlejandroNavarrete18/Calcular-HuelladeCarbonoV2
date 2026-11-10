@@ -67,11 +67,20 @@ export function useParticipantForm() {
   }
 
   /**
-   * Datos listos para enviar al servidor junto con las respuestas del cuestionario.
+   * Datos listos para enviar al servidor junto con el cuestionario elegido, sus respuestas y las cantidades.
    * "cuestionarioVersion" permite al servidor avisar si el cuestionario cambió mientras la persona contestaba.
+   *
+   * @param {{questionnaireKey: string, questionnaireVersion: string, answers: object, quantities: object}} quiz
    */
   const buildPayload = useCallback(
-    (answers, cuestionarioVersion) => ({ ...validation.value, answers, cuestionarioVersion, website: values.website }),
+    ({ questionnaireKey, questionnaireVersion, answers, quantities }) => ({
+      ...validation.value,
+      cuestionario: questionnaireKey,
+      cuestionarioVersion: questionnaireVersion,
+      answers,
+      quantities,
+      website: values.website,
+    }),
     [validation, values.website]
   );
 

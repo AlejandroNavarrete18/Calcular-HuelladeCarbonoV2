@@ -1,4 +1,4 @@
--- Datos iniciales de huella_carbono: paises, estados, municipios, unidades regionales, escuelas y cuestionario.
+-- Datos iniciales de huella_carbono: paises, estados, municipios, unidades regionales, escuelas y cuestionarios (hogar y trabajo).
 -- Ejecutar DESPUES de BDesquema_huella_carbono.sql.
 --
 -- Paises: ISO 3166-1. Estados y municipios: Catalogo Unico de Claves Geoestadisticas del INEGI (32 estados, 2,478 municipios).
@@ -2809,10 +2809,17 @@ INSERT INTO `escuelas_facultades` VALUES (1,3,'Escuela De Artes Plásticas',1,'2
 /*!40000 ALTER TABLE `escuelas_facultades` ENABLE KEYS */;
 UNLOCK TABLES;
 
--- Tabla `preguntas`
+-- Tabla `cuestionarios` (1 = hogar, 2 = trabajo). Las claves deben coincidir con las que usa la aplicación.
+LOCK TABLES `cuestionarios` WRITE;
+INSERT INTO `cuestionarios` (`id_cuestionario`, `clave`, `nombre`) VALUES
+  (1, 'hogar', 'Cuestionario del Hogar'),
+  (2, 'trabajo', 'Cuestionario del Lugar de Trabajo');
+UNLOCK TABLES;
+
+-- Tabla `preguntas` (cuestionario 1: hogar)
 LOCK TABLES `preguntas` WRITE;
 /*!40000 ALTER TABLE `preguntas` DISABLE KEYS */;
-INSERT INTO `preguntas` VALUES (1,'electrodomesticos',1,'hogar','1. ¿QUÉ APARATOS ELECTRÓNICOS TIENES EN CASA?','SELECCIONA TODOS LOS QUE TENGAS','opcion_multiple'),(2,'gas',2,'hogar','2. EN MI DOMICILIO UTILIZO:',NULL,'opcion_unica'),(3,'focos',3,'hogar','3. EN MI CASA LOS FOCOS SON:',NULL,'opcion_unica'),(4,'transporte',4,'transporte','4. ¿CÓMO TE TRANSPORTAS PARA IR AL TRABAJO O A LA ESCUELA?','SELECCIONA LAS OPCIONES QUE APLIQUEN','opcion_multiple'),(5,'tiempo_recorrido',5,'transporte','5. ¿EN CUÁNTO TIEMPO HACES ESE RECORRIDO?',NULL,'opcion_unica'),(6,'vuelos',6,'transporte','6. ¿CON QUÉ FRECUENCIA VUELAS EN AVIÓN?',NULL,'opcion_unica'),(7,'carne_matriz',7,'consumo','7. ¿CON QUÉ FRECUENCIA COMES CARNE DE?',NULL,'matriz'),(8,'plasticos',8,'consumo','8. ¿CON QUÉ REGULARIDAD UTILIZAS PLÁSTICOS DE UN SOLO USO?',NULL,'opcion_unica'),(9,'ropa',9,'consumo','9. LA ROPA QUE UTILIZO:',NULL,'opcion_unica'),(10,'dispositivos_matriz',10,'consumo','10. CADA CUÁNTO CAMBIO MIS DISPOSITIVOS ELECTRÓNICOS',NULL,'matriz');
+INSERT INTO `preguntas` (`id_pregunta`, `id_cuestionario`, `clave`, `numero`, `categoria`, `titulo`, `subtitulo`, `tipo`, `permite_cantidad`) VALUES (1,1,'electrodomesticos',1,'hogar','1. ¿QUÉ APARATOS ELECTRÓNICOS TIENES EN CASA?','SELECCIONA TODOS LOS QUE TENGAS','opcion_multiple',1),(2,1,'gas',2,'hogar','2. EN MI DOMICILIO UTILIZO:',NULL,'opcion_unica',0),(3,1,'focos',3,'hogar','3. EN MI CASA LOS FOCOS SON:',NULL,'opcion_unica',1),(4,1,'transporte',4,'transporte','4. ¿CÓMO TE TRANSPORTAS PARA IR AL TRABAJO O A LA ESCUELA?','SELECCIONA LAS OPCIONES QUE APLIQUEN','opcion_multiple',0),(5,1,'tiempo_recorrido',5,'transporte','5. ¿EN CUÁNTO TIEMPO HACES ESE RECORRIDO?',NULL,'opcion_unica',0),(6,1,'vuelos',6,'transporte','6. ¿CON QUÉ FRECUENCIA VUELAS EN AVIÓN?',NULL,'opcion_unica',0),(7,1,'carne_matriz',7,'consumo','7. ¿CON QUÉ FRECUENCIA COMES CARNE DE?',NULL,'matriz',0),(8,1,'plasticos',8,'consumo','8. ¿CON QUÉ REGULARIDAD UTILIZAS PLÁSTICOS DE UN SOLO USO?',NULL,'opcion_unica',0),(9,1,'ropa',9,'consumo','9. LA ROPA QUE UTILIZO:',NULL,'opcion_unica',0),(10,1,'dispositivos_matriz',10,'consumo','10. CADA CUÁNTO CAMBIO MIS DISPOSITIVOS ELECTRÓNICOS',NULL,'matriz',0);
 /*!40000 ALTER TABLE `preguntas` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -2836,6 +2843,35 @@ LOCK TABLES `pesos_matriz` WRITE;
 INSERT INTO `pesos_matriz` VALUES (1,40,2360.00),(1,41,1865.00),(1,42,675.00),(1,43,0.00),(2,40,540.00),(2,41,386.00),(2,42,155.00),(2,43,0.00),(3,40,344.00),(3,41,245.00),(3,42,98.00),(3,43,0.00),(4,40,128.00),(4,41,91.00),(4,42,37.00),(4,43,0.00),(5,52,120.00),(5,53,60.00),(5,54,25.00),(5,55,15.00),(5,56,0.00),(6,52,340.00),(6,53,170.00),(6,54,68.00),(6,55,43.00),(6,56,0.00),(7,52,700.00),(7,53,350.00),(7,54,140.00),(7,55,88.00),(7,56,0.00),(8,52,180.00),(8,53,90.00),(8,54,36.00),(8,55,22.00),(8,56,0.00);
 /*!40000 ALTER TABLE `pesos_matriz` ENABLE KEYS */;
 UNLOCK TABLES;
+
+-- Cuestionario de trabajo (id 2): copia del de hogar (mismas claves, opciones y pesos) para que el cálculo sea idéntico.
+-- Después se editan sus textos desde la base. Las preguntas se enlazan por clave.
+INSERT INTO `preguntas` (`id_cuestionario`, `clave`, `numero`, `categoria`, `titulo`, `subtitulo`, `tipo`, `permite_cantidad`)
+SELECT 2, p.`clave`, p.`numero`, p.`categoria`, p.`titulo`, p.`subtitulo`, p.`tipo`, p.`permite_cantidad`
+  FROM `preguntas` p
+ WHERE p.`id_cuestionario` = 1;
+
+INSERT INTO `opciones` (`id_pregunta`, `clave`, `etiqueta`, `kg_co2`, `horas`, `orden`)
+SELECT pn.`id_pregunta`, o.`clave`, o.`etiqueta`, o.`kg_co2`, o.`horas`, o.`orden`
+  FROM `opciones` o
+  JOIN `preguntas` po ON po.`id_pregunta` = o.`id_pregunta` AND po.`id_cuestionario` = 1
+  JOIN `preguntas` pn ON pn.`id_cuestionario` = 2 AND pn.`clave` = po.`clave`;
+
+INSERT INTO `filas_matriz` (`id_pregunta`, `clave`, `etiqueta`, `orden`)
+SELECT pn.`id_pregunta`, f.`clave`, f.`etiqueta`, f.`orden`
+  FROM `filas_matriz` f
+  JOIN `preguntas` po ON po.`id_pregunta` = f.`id_pregunta` AND po.`id_cuestionario` = 1
+  JOIN `preguntas` pn ON pn.`id_cuestionario` = 2 AND pn.`clave` = po.`clave`;
+
+INSERT INTO `pesos_matriz` (`id_fila`, `id_opcion`, `kg_co2`)
+SELECT fn.`id_fila`, opn.`id_opcion`, w.`kg_co2`
+  FROM `pesos_matriz` w
+  JOIN `filas_matriz` fo ON fo.`id_fila` = w.`id_fila`
+  JOIN `opciones` opo ON opo.`id_opcion` = w.`id_opcion`
+  JOIN `preguntas` po ON po.`id_pregunta` = fo.`id_pregunta` AND po.`id_cuestionario` = 1
+  JOIN `preguntas` pn ON pn.`id_cuestionario` = 2 AND pn.`clave` = po.`clave`
+  JOIN `filas_matriz` fn ON fn.`id_pregunta` = pn.`id_pregunta` AND fn.`clave` = fo.`clave`
+  JOIN `opciones` opn ON opn.`id_pregunta` = pn.`id_pregunta` AND opn.`clave` = opo.`clave`;
 
 /*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;

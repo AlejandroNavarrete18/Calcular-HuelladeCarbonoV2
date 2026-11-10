@@ -193,8 +193,10 @@ export function createReportesRepository(pool) {
                 p.fecha_nacimiento AS fechaNacimiento, TIMESTAMPDIFF(YEAR, p.fecha_nacimiento, CURDATE()) AS edad,
                 ${COLUMNAS_UBICACION},
                 p.hogar_kg AS hogarKg, p.transporte_kg AS transporteKg, p.consumo_kg AS consumoKg,
-                p.total_kg AS totalKg, p.nivel, p.correo_enviado AS correoEnviado
+                p.total_kg AS totalKg, p.nivel, p.correo_enviado AS correoEnviado,
+                cu.nombre AS cuestionario
            ${FROM_PARTICIPACIONES}
+           JOIN cuestionarios cu ON cu.id_cuestionario = p.id_cuestionario
           WHERE p.id_participacion = ?`,
         [id]
       );
@@ -203,7 +205,8 @@ export function createReportesRepository(pool) {
       }
 
       const [respuestas] = await pool.execute(
-        `SELECT pr.numero, pr.titulo, pr.categoria, fm.etiqueta AS fila, op.etiqueta AS opcion
+        `SELECT pr.numero, pr.titulo, pr.categoria, fm.etiqueta AS fila, op.etiqueta AS opcion,
+                r.cantidad, pr.permite_cantidad AS permiteCantidad
            FROM respuestas r
            JOIN preguntas pr ON pr.id_pregunta = r.id_pregunta
            JOIN opciones op ON op.id_opcion = r.id_opcion

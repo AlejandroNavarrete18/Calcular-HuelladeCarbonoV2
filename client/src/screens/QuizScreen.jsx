@@ -49,7 +49,18 @@ function QuestionnaireUnavailable({ loading, onRetry, onBack }) {
  *   `status` es el estado de descarga del cuestionario (LIST_STATUS).
  */
 export default function QuizScreen({ quiz, status, onRetry, onBack, onNext }) {
-  const { question, answers, currentStep, totalSteps, isStepValid, selectOption, selectMatrixCell } = quiz;
+  const {
+    question,
+    answers,
+    quantities,
+    currentStep,
+    totalSteps,
+    isStepValid,
+    selectOption,
+    selectMatrixCell,
+    setQuantity,
+    commitQuantity,
+  } = quiz;
 
   if (!question) {
     return <QuestionnaireUnavailable loading={status !== LIST_STATUS.ERROR} onRetry={onRetry} onBack={onBack} />;
@@ -63,8 +74,11 @@ export default function QuizScreen({ quiz, status, onRetry, onBack, onNext }) {
         <QuestionCard
           question={question}
           answer={answers[question.id]}
+          quantities={quantities[question.id]}
           onSelectOption={selectOption}
           onSelectCell={selectMatrixCell}
+          onQuantityChange={(optionId, value) => setQuantity(question.id, optionId, value)}
+          onQuantityCommit={(optionId) => commitQuantity(question.id, optionId)}
         />
 
         {!isStepValid && (

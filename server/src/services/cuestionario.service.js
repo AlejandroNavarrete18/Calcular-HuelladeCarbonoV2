@@ -61,7 +61,7 @@ function armarMatriz(base, opciones, filas, pesoPorPar) {
 }
 
 /**
- * Convierte las filas de MySQL en el cuestionario de la aplicación y en un índice
+ * Convierte las filas de MySQL de UN cuestionario en las preguntas de la aplicación y en un índice
  * (clave -> ids de la base) para poder guardar las respuestas en la tabla `respuestas`.
  */
 function construir({ preguntas, opciones, filas, pesos }) {
@@ -93,6 +93,9 @@ function construir({ preguntas, opciones, filas, pesos }) {
     if (pregunta.subtitulo) {
       base.subtitle = pregunta.subtitulo;
     }
+    if (pregunta.permite_cantidad) {
+      base.allowQuantity = true;
+    }
 
     if (type === QUESTION_TYPE.MATRIX) {
       questions.push(armarMatriz(base, susOpciones, susFilas, pesoPorPar));
@@ -111,43 +114,74 @@ function construir({ preguntas, opciones, filas, pesos }) {
   return { questions, indice, problemas };
 }
 
+// Arma un cuestionario por cada fila de `cuestionarios`, con los problemas de cada uno rotulados con su clave.
+function construirTodos(datos) {
+  const preguntasPorCuestionario = agruparPor(datos.preguntas, 'id_cuestionario');
+  return datos.cuestionarios.map((cuestionario) => {
+    const preguntas = preguntasPorCuestionario.get(cuestionario.id_cuestionario) ?? [];
+    const { questions, indice, problemas } = construir({ ...datos, preguntas });
+    return {
+      cuestionario,
+      questions,
+      indice,
+      problemas: problemas.map((problema) => `[${cuestionario.clave}] ${problema}`),
+    };
+  });
+}
+
 // Huella digital corta del contenido: cambia cuando cambia cualquier texto, opción o peso.
 function calcularVersion(questions) {
   return createHash('sha256').update(JSON.stringify(questions)).digest('hex').slice(0, 16);
 }
 
 /**
- * Servicio del cuestionario. Lee preguntas, opciones y pesos de MySQL, comprueba que se puedan usar y
- * los guarda en memoria unos segundos para no consultar la base en cada petición.
+ * Servicio de los cuestionarios (hogar, trabajo...). Lee preguntas, opciones y pesos de MySQL, comprueba que se
+ * puedan usar y los guarda en memoria unos segundos para no consultar la base en cada petición.
  *
- *  - Los cambios hechos en la base (por ejemplo desde el panel de administración) se ven en `cacheMs`.
- *  - Si una edición deja el cuestionario inutilizable (un peso faltante...), se registra el problema y se
- *    sigue con la última versión válida, así una edición a medias no tumba el servicio.
+ *  - Los cambios hechos en la base se ven en `cacheMs`.
+ *  - Cada cuestionario se valida por separado: si una edición deja UNO inutilizable (un peso faltante...), se
+ *    registra el problema y ese cuestionario sigue con su última versión válida; los demás no se ven afectados.
  *
  * @param {object} deps
  * @param {ReturnType<import('../repositories/cuestionario.repository.js').createCuestionarioRepository>} deps.cuestionario
  * @param {{error: Function}} deps.logger
- * @param {number} deps.cacheMs Tiempo que se reutiliza el cuestionario leído.
+ * @param {number} deps.cacheMs Tiempo que se reutilizan los cuestionarios leídos.
  */
 export function createCuestionarioService({ cuestionario, logger, cacheMs }) {
-  let actual = null; // { version, questions, publico, indice, leidoEn }
+  let actual = null; // { porClave: Map<clave, snapshot>, leidoEn }
   let lecturaEnCurso = null;
 
+  /**
+   * @returns {Promise<{problemas: string[], snapshots: Map<string, object>, invalidos: Set<string>}>}
+   *   Un snapshot por cuestionario válido: { id, clave, nombre, version, questions, publico, indice }.
+   */
   async function leer() {
-    const { questions, indice, problemas } = construir(await cuestionario.leerCuestionario());
-    if (problemas.length > 0) {
-      return { problemas };
+    const construidos = construirTodos(await cuestionario.leerCuestionario());
+    const problemas = [];
+    const snapshots = new Map();
+    const invalidos = new Set();
+
+    if (construidos.length === 0) {
+      problemas.push('No hay cuestionarios en la tabla cuestionarios.');
     }
-    return {
-      problemas,
-      snapshot: {
-        version: calcularVersion(questions),
-        questions,
-        publico: toPublicQuestionnaire(questions),
-        indice,
-        leidoEn: Date.now(),
-      },
-    };
+    for (const construido of construidos) {
+      const { cuestionario: fila, questions, indice } = construido;
+      if (construido.problemas.length > 0) {
+        problemas.push(...construido.problemas);
+        invalidos.add(fila.clave);
+      } else {
+        snapshots.set(fila.clave, {
+          id: fila.id_cuestionario,
+          clave: fila.clave,
+          nombre: fila.nombre,
+          version: calcularVersion(questions),
+          questions,
+          publico: toPublicQuestionnaire(questions),
+          indice,
+        });
+      }
+    }
+    return { problemas, snapshots, invalidos };
   }
 
   // Una sola lectura a la vez, aunque lleguen muchas peticiones juntas.
@@ -160,46 +194,57 @@ export function createCuestionarioService({ cuestionario, logger, cacheMs }) {
     return lecturaEnCurso;
   }
 
+  // Vuelve a leer la base y combina: lo válido se actualiza; lo inválido conserva su última versión válida.
+  async function refrescar() {
+    try {
+      const { problemas, snapshots, invalidos } = await leerUnaVez();
+      const porClave = new Map(snapshots);
+      for (const clave of invalidos) {
+        const anterior = actual?.porClave.get(clave);
+        if (anterior) {
+          porClave.set(clave, anterior);
+        }
+      }
+      if (problemas.length > 0) {
+        logger.error(`Hay cuestionarios en MySQL con problemas; siguen con su última versión válida:\n - ${problemas.join('\n - ')}`);
+      }
+      actual = { porClave, leidoEn: Date.now() };
+    } catch (error) {
+      if (!actual) {
+        throw error;
+      }
+      logger.error('No se pudo releer los cuestionarios; se sigue con la última versión válida:', error.code ?? '', error.message);
+      // Se reintentará pasado `cacheMs`, no en cada petición.
+      actual = { ...actual, leidoEn: Date.now() };
+    }
+  }
+
   return {
     /**
      * Primera lectura, al arrancar el servidor.
-     * @returns {Promise<string[]>} Problemas del cuestionario; vacía si se puede usar.
+     * @returns {Promise<string[]>} Problemas de los cuestionarios; vacía si todos se pueden usar.
      */
     async cargar() {
-      const { problemas, snapshot } = await leerUnaVez();
-      if (snapshot) {
-        actual = snapshot;
+      const { problemas, snapshots } = await leerUnaVez();
+      if (problemas.length === 0) {
+        actual = { porClave: snapshots, leidoEn: Date.now() };
       }
       return problemas;
     },
 
     /**
-     * Cuestionario vigente: { version, questions (con pesos), publico (sin pesos), indice }.
+     * Cuestionario vigente de esa clave (por ejemplo "hogar" o "trabajo"):
+     * { id, clave, nombre, version, questions (con pesos), publico (sin pesos), indice }.
      * Cada petición debe usar UNA sola instantánea de principio a fin.
+     *
+     * @param {string} clave
+     * @returns {Promise<object|undefined>} undefined si no existe un cuestionario con esa clave.
      */
-    async obtener() {
-      if (actual && Date.now() - actual.leidoEn < cacheMs) {
-        return actual;
+    async obtener(clave) {
+      if (!actual || Date.now() - actual.leidoEn >= cacheMs) {
+        await refrescar();
       }
-      try {
-        const { problemas, snapshot } = await leerUnaVez();
-        if (snapshot) {
-          actual = snapshot;
-          return actual;
-        }
-        logger.error(`El cuestionario en MySQL tiene problemas; se sigue con la última versión válida:\n - ${problemas.join('\n - ')}`);
-      } catch (error) {
-        if (!actual) {
-          throw error;
-        }
-        logger.error('No se pudo releer el cuestionario; se sigue con la última versión válida:', error.code ?? '', error.message);
-      }
-      if (!actual) {
-        throw new Error('No hay un cuestionario válido cargado.');
-      }
-      // Se reintentará pasado `cacheMs`, no en cada petición.
-      actual = { ...actual, leidoEn: Date.now() };
-      return actual;
+      return actual.porClave.get(clave);
     },
 
     /**
@@ -207,22 +252,35 @@ export function createCuestionarioService({ cuestionario, logger, cacheMs }) {
      *   - opción única:     una fila
      *   - opción múltiple:  una fila por opción marcada
      *   - matriz:           una fila por cada fila de la matriz (con su id_fila)
+     * Cada fila lleva su cantidad (1 si la pregunta no la pide o la persona no la cambió).
      *
      * @param {Record<string, unknown>} answers
+     * @param {Record<string, Record<string, number>>} quantities Cantidades ya revisadas (resolveQuantities).
      * @param {{questions: object[], indice: Map<string, object>}} snapshot El mismo con el que se validó y calculó.
-     * @returns {Array<{idPregunta: number, idFila: number|null, idOpcion: number}>}
+     * @returns {Array<{idPregunta: number, idFila: number|null, idOpcion: number, cantidad: number}>}
      */
-    mapearRespuestas(answers, snapshot) {
+    mapearRespuestas(answers, quantities, snapshot) {
+      const cantidadDe = (question, optionId) => quantities?.[question.id]?.[optionId] ?? 1;
       const filas = [];
       for (const question of snapshot.questions) {
         const pregunta = snapshot.indice.get(question.id);
         const respuesta = answers[question.id];
 
         if (question.type === QUESTION_TYPE.RADIO) {
-          filas.push({ idPregunta: pregunta.id, idFila: null, idOpcion: pregunta.opciones.get(respuesta) });
+          filas.push({
+            idPregunta: pregunta.id,
+            idFila: null,
+            idOpcion: pregunta.opciones.get(respuesta),
+            cantidad: cantidadDe(question, respuesta),
+          });
         } else if (question.type === QUESTION_TYPE.CHECKBOX) {
           for (const optionId of respuesta) {
-            filas.push({ idPregunta: pregunta.id, idFila: null, idOpcion: pregunta.opciones.get(optionId) });
+            filas.push({
+              idPregunta: pregunta.id,
+              idFila: null,
+              idOpcion: pregunta.opciones.get(optionId),
+              cantidad: cantidadDe(question, optionId),
+            });
           }
         } else {
           for (const row of question.rows) {
@@ -230,6 +288,7 @@ export function createCuestionarioService({ cuestionario, logger, cacheMs }) {
               idPregunta: pregunta.id,
               idFila: pregunta.filas.get(row.id),
               idOpcion: pregunta.opciones.get(respuesta[row.id]),
+              cantidad: 1,
             });
           }
         }

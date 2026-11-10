@@ -2,6 +2,7 @@ import Header from './components/layout/Header.jsx';
 import Footer from './components/layout/Footer.jsx';
 import IntroScreen from './screens/IntroScreen.jsx';
 import ThanksScreen from './screens/ThanksScreen.jsx';
+import SelectQuestionnaireScreen from './screens/SelectQuestionnaireScreen.jsx';
 import QuizScreen from './screens/QuizScreen.jsx';
 import ContactScreen from './screens/ContactScreen.jsx';
 import ResultsScreen from './screens/ResultsScreen.jsx';
@@ -10,13 +11,22 @@ import { SCREENS } from './constants.js';
 
 // Pantalla que corresponde al paso actual del flujo  
 function CurrentScreen({ flow }) {
-  const { screen, quiz, questionnaire, submission, handlers } = flow;
+  const { screen, quiz, questionnaire, questionnaireKey, submission, handlers } = flow;
 
   if (screen === SCREENS.INTRO) {
     return <IntroScreen onStart={handlers.handleStart} />;
   }
   if (screen === SCREENS.THANKS) {
     return <ThanksScreen onBack={handlers.handleThanksBack} onNext={handlers.handleThanksNext} />;
+  }
+  if (screen === SCREENS.SELECT) {
+    return (
+      <SelectQuestionnaireScreen
+        chosenKey={questionnaireKey}
+        onBack={handlers.handleSelectBack}
+        onStart={handlers.handleSelectStart}
+      />
+    );
   }
   if (screen === SCREENS.QUIZ) {
     return (
@@ -33,6 +43,8 @@ function CurrentScreen({ flow }) {
     return (
       <ContactScreen
         answers={quiz.answers}
+        quantities={quiz.submissionQuantities}
+        questionnaireKey={questionnaireKey}
         questionnaireVersion={questionnaire.version}
         isQuizComplete={quiz.isComplete}
         onBack={handlers.handleContactBack}

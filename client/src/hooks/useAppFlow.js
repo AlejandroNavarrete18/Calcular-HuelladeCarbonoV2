@@ -10,6 +10,7 @@ const QUESTIONNAIRE_OPTIONS = Object.freeze({ emptyValue: NO_QUESTIONNAIRE });
 
 /**
  * Flujo completo de la aplicación: qué pantalla se ve y cómo se navega entre ellas.
+ * Introducción -> agradecimientos -> elegir cuestionario (hogar o trabajo) -> preguntas -> formulario final -> resultados.
  * CANDADO DE RESULTADOS: la pantalla de resultados SOLO existe después de que el servidor guardó la
  * participación y devolvió los resultados (`submission`). Y el formulario final solo se abre con TODAS las
  * preguntas del cuestionario respondidas */
@@ -17,7 +18,12 @@ const QUESTIONNAIRE_OPTIONS = Object.freeze({ emptyValue: NO_QUESTIONNAIRE });
 export function useAppFlow() {
   const [screen, setScreen] = useState(SCREENS.INTRO);
   const [submission, setSubmission] = useState(null); // { results, email } que devolvió el servidor
-  const questionnaire = useRemoteData(fetchCuestionario, 'cuestionario', QUESTIONNAIRE_OPTIONS);
+  const [questionnaireKey, setQuestionnaireKey] = useState(null); // cuestionario elegido: 'hogar' | 'trabajo'
+  // El cuestionario solo se descarga cuando ya se eligió cuál
+  const questionnaire = useRemoteData(fetchCuestionario, questionnaireKey, {
+    ...QUESTIONNAIRE_OPTIONS,
+    enabled: questionnaireKey !== null,
+  });
   const quiz = useQuiz(questionnaire.data.questions);
   const { transition, getAnimationClass } = useScreenTransition();
 
@@ -28,20 +34,35 @@ export function useAppFlow() {
   if (visibleScreen === SCREENS.CONTACT && !quiz.isComplete) {
     visibleScreen = SCREENS.QUIZ;
   }
+  if (visibleScreen === SCREENS.QUIZ && questionnaireKey === null) {
+    visibleScreen = SCREENS.SELECT;
+  }
 
   const goTo = (target, direction = 'next') => transition(() => setScreen(target), direction);
 
   const handleStart = () => goTo(SCREENS.THANKS);
   const handleThanksBack = () => goTo(SCREENS.INTRO, 'prev');
-  const handleThanksNext = () =>
+  const handleThanksNext = () => goTo(SCREENS.SELECT);
+
+  const handleSelectBack = () => goTo(SCREENS.THANKS, 'prev');
+
+  /*
+   * Las preguntas de los dos cuestionarios comparten claves, así que al cambiar de cuestionario se borran las
+   * respuestas y cantidades. Si se elige el mismo que ya se estaba contestando, se conservan.
+   */
+  const handleSelectStart = (key) =>
     transition(() => {
+      if (key !== questionnaireKey) {
+        quiz.reset();
+        setQuestionnaireKey(key);
+      }
       quiz.goToStep(0);
       setScreen(SCREENS.QUIZ);
     });
 
   const handleQuizBack = () => {
     if (quiz.currentStep === 0) {
-      goTo(SCREENS.THANKS, 'prev');
+      goTo(SCREENS.SELECT, 'prev');
       return;
     }
     transition(() => quiz.goToStep(quiz.currentStep - 1), 'prev');
@@ -78,8 +99,8 @@ export function useAppFlow() {
   const handleRestart = () =>
     transition(
       () => {
-        questionnaire.reload(); // trae los cambios que se hayan hecho al cuestionario en la base de datos
         quiz.reset();
+        setQuestionnaireKey(null); // el cuestionario se vuelve a descargar (con los cambios de la base) al elegirlo
         setSubmission(null);
         setScreen(SCREENS.INTRO);
       },
@@ -90,6 +111,7 @@ export function useAppFlow() {
     screen: visibleScreen,
     quiz,
     questionnaire: { status: questionnaire.status, version: questionnaire.data.version, reload: questionnaire.reload },
+    questionnaireKey,
     submission,
     animationClass: getAnimationClass(visibleScreen === SCREENS.QUIZ),
     screenKey: quizAwareKey(visibleScreen, quiz.currentStep),
@@ -97,6 +119,8 @@ export function useAppFlow() {
       handleStart,
       handleThanksBack,
       handleThanksNext,
+      handleSelectBack,
+      handleSelectStart,
       handleQuizBack,
       handleQuizNext,
       handleContactBack,

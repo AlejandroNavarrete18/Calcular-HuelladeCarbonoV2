@@ -28,6 +28,10 @@ function groupAnswers(respuestas) {
     if (respuesta.fila) {
       linea = `${respuesta.fila}: ${respuesta.opcion}`;
     }
+    // Las preguntas que piden cantidad (aparatos, focos) la muestran junto a la opción
+    if (respuesta.permiteCantidad) {
+      linea = `${linea} (×${respuesta.cantidad})`;
+    }
     groups.get(respuesta.numero).lineas.push(linea);
   }
   return [...groups.values()];
@@ -79,6 +83,7 @@ export default function ParticipantDetailModal({ id, canDelete, resend, onClose,
                 {data.nombre} {data.apellidos}
               </Field>
               <Field label="Fecha de participación">{formatDateTime(data.creadoEn)}</Field>
+              <Field label="Cuestionario">{data.cuestionario}</Field>
               <Field label="Correo">{data.correo}</Field>
               <Field label="Teléfono">{data.telefono}</Field>
               <Field label="Nacimiento">

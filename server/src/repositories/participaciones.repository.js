@@ -1,6 +1,6 @@
 import { MOTIVO_LIMITE_DESTINATARIO } from './colaCorreo.repository.js';
 
-const COLUMNAS_RESPUESTA = 4;
+const COLUMNAS_RESPUESTA = 5;
 
 /**
  * Acceso a las tablas `participaciones` y `respuestas`.
@@ -20,10 +20,10 @@ export function createParticipacionesRepository(pool) {
      * o se guarda todo, o no se guarda nada.
      *
      * @param {{
-     *   participacion: {nombre, apellidos, correo, telefono, fechaNacimiento, codigoPais, idEstado, idMunicipio,
+     *   participacion: {idCuestionario, nombre, apellidos, correo, telefono, fechaNacimiento, codigoPais, idEstado, idMunicipio,
      *                   ciudadProvincia, localidadComunidad, idUnidadRegional, idEscuelaFacultad,
      *                   institucionExterna, hogarKg, transporteKg, consumoKg, totalKg, nivel, respuestasJson},
-     *   respuestas: Array<{idPregunta: number, idFila: number|null, idOpcion: number}>
+     *   respuestas: Array<{idPregunta: number, idFila: number|null, idOpcion: number, cantidad: number}>
      * }} datos
      * @param {boolean} [datos.encolarCorreo] si es true, el correo de resultados queda en la cola PERSISTENTE en la
      *   misma transacción: o se guarda todo (participación, respuestas y correo en cola) o no se guarda nada.
@@ -38,11 +38,12 @@ export function createParticipacionesRepository(pool) {
 
         const [insercion] = await conexion.execute(
           `INSERT INTO participaciones
-             (nombre, apellidos, correo, telefono, fecha_nacimiento, codigo_pais, id_estado, id_municipio,
+             (id_cuestionario, nombre, apellidos, correo, telefono, fecha_nacimiento, codigo_pais, id_estado, id_municipio,
               ciudad_provincia, localidad_comunidad, id_unidad_regional, id_escuela_facultad, institucion_externa,
               hogar_kg, transporte_kg, consumo_kg, total_kg, nivel, respuestas_json)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
+            participacion.idCuestionario,
             participacion.nombre,
             participacion.apellidos,
             participacion.correo,
@@ -66,9 +67,9 @@ export function createParticipacionesRepository(pool) {
         );
         const idParticipacion = insercion.insertId;
 
-        const parametros = respuestas.flatMap((r) => [idParticipacion, r.idPregunta, r.idFila, r.idOpcion]);
+        const parametros = respuestas.flatMap((r) => [idParticipacion, r.idPregunta, r.idFila, r.idOpcion, r.cantidad]);
         await conexion.execute(
-          `INSERT INTO respuestas (id_participacion, id_pregunta, id_fila, id_opcion)
+          `INSERT INTO respuestas (id_participacion, id_pregunta, id_fila, id_opcion, cantidad)
            VALUES ${placeholdersRespuestas(respuestas.length)}`,
           parametros
         );

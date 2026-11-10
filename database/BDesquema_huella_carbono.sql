@@ -125,6 +125,24 @@ CREATE TABLE `cuentas_correo` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `cuestionarios`
+--
+
+DROP TABLE IF EXISTS `cuestionarios`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `cuestionarios` (
+  `id_cuestionario` tinyint unsigned NOT NULL AUTO_INCREMENT,
+  `clave` varchar(30) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'Debe coincidir con la clave que usa la aplicación: hogar, trabajo',
+  `nombre` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `creado_en` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `actualizado_en` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id_cuestionario`),
+  UNIQUE KEY `uq_cuestionarios_clave` (`clave`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `envios_correo`
 --
 
@@ -306,6 +324,7 @@ CREATE TABLE `participaciones` (
   `respuestas_json` json NOT NULL,
   `correo_enviado` tinyint(1) NOT NULL DEFAULT '0',
   `creado_en` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `id_cuestionario` tinyint unsigned NOT NULL COMMENT 'Cuestionario que contestó (1 = hogar, 2 = trabajo)',
   PRIMARY KEY (`id_participacion`),
   KEY `idx_participaciones_correo` (`correo`),
   KEY `idx_participaciones_creado_en` (`creado_en`),
@@ -317,11 +336,13 @@ CREATE TABLE `participaciones` (
   KEY `idx_participaciones_escuela` (`id_escuela_facultad`),
   KEY `fk_participaciones_municipio` (`id_municipio`,`id_estado`),
   KEY `fk_participaciones_escuela` (`id_escuela_facultad`,`id_unidad_regional`),
+  KEY `idx_participaciones_cuestionario` (`id_cuestionario`),
   CONSTRAINT `fk_participaciones_pais` FOREIGN KEY (`codigo_pais`) REFERENCES `paises` (`codigo`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `fk_participaciones_estado` FOREIGN KEY (`id_estado`) REFERENCES `estados` (`id_estado`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `fk_participaciones_municipio` FOREIGN KEY (`id_municipio`, `id_estado`) REFERENCES `municipios` (`id_municipio`, `id_estado`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `fk_participaciones_unidad` FOREIGN KEY (`id_unidad_regional`) REFERENCES `unidades_regionales` (`id_unidad_regional`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `fk_participaciones_escuela` FOREIGN KEY (`id_escuela_facultad`, `id_unidad_regional`) REFERENCES `escuelas_facultades` (`id_escuela_facultad`, `id_unidad_regional`) ON DELETE RESTRICT ON UPDATE RESTRICT,
+  CONSTRAINT `fk_participaciones_cuestionario` FOREIGN KEY (`id_cuestionario`) REFERENCES `cuestionarios` (`id_cuestionario`) ON DELETE RESTRICT ON UPDATE CASCADE,
   CONSTRAINT `ck_participaciones_telefono` CHECK ((char_length(`telefono`) >= 10)),
   CONSTRAINT `ck_participaciones_totales` CHECK (((`hogar_kg` >= 0) and (`transporte_kg` >= 0) and (`consumo_kg` >= 0) and (`total_kg` >= 0))),
   CONSTRAINT `ck_participaciones_ubicacion` CHECK ((((`codigo_pais` = 'MX') and (`id_estado` is not null) and (`id_municipio` is not null) and (`ciudad_provincia` is null)) or ((`codigo_pais` <> 'MX') and (`id_estado` is null) and (`id_municipio` is null) and (`ciudad_provincia` is not null)))),
@@ -362,9 +383,12 @@ CREATE TABLE `preguntas` (
   `titulo` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `subtitulo` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `tipo` enum('opcion_unica','opcion_multiple','matriz') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `id_cuestionario` tinyint unsigned NOT NULL,
+  `permite_cantidad` tinyint(1) NOT NULL DEFAULT '0' COMMENT '1 = la persona indica cuántos tiene de cada opción elegida (solo opción única y múltiple)',
   PRIMARY KEY (`id_pregunta`),
-  UNIQUE KEY `uq_preguntas_clave` (`clave`),
-  UNIQUE KEY `uq_preguntas_numero` (`numero`)
+  UNIQUE KEY `uq_preguntas_cuestionario_clave` (`id_cuestionario`,`clave`),
+  UNIQUE KEY `uq_preguntas_cuestionario_numero` (`id_cuestionario`,`numero`),
+  CONSTRAINT `fk_preguntas_cuestionario` FOREIGN KEY (`id_cuestionario`) REFERENCES `cuestionarios` (`id_cuestionario`) ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -382,6 +406,7 @@ CREATE TABLE `respuestas` (
   `id_fila` int unsigned DEFAULT NULL,
   `id_opcion` int unsigned NOT NULL,
   `id_fila_unico` int unsigned GENERATED ALWAYS AS (ifnull(`id_fila`,0)) STORED,
+  `cantidad` smallint unsigned NOT NULL DEFAULT '1' COMMENT 'Cuántos tiene (solo si la pregunta permite_cantidad). No entra al cálculo todavía',
   PRIMARY KEY (`id_respuesta`),
   UNIQUE KEY `uq_respuestas_no_repetida` (`id_participacion`,`id_pregunta`,`id_fila_unico`,`id_opcion`),
   KEY `idx_respuestas_pregunta_opcion` (`id_pregunta`,`id_opcion`),
@@ -389,7 +414,8 @@ CREATE TABLE `respuestas` (
   KEY `fk_respuestas_fila` (`id_fila`,`id_pregunta`),
   CONSTRAINT `fk_respuestas_fila` FOREIGN KEY (`id_fila`, `id_pregunta`) REFERENCES `filas_matriz` (`id_fila`, `id_pregunta`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `fk_respuestas_opcion` FOREIGN KEY (`id_opcion`, `id_pregunta`) REFERENCES `opciones` (`id_opcion`, `id_pregunta`) ON DELETE RESTRICT ON UPDATE CASCADE,
-  CONSTRAINT `fk_respuestas_participacion` FOREIGN KEY (`id_participacion`) REFERENCES `participaciones` (`id_participacion`) ON DELETE CASCADE ON UPDATE CASCADE
+  CONSTRAINT `fk_respuestas_participacion` FOREIGN KEY (`id_participacion`) REFERENCES `participaciones` (`id_participacion`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `ck_respuestas_cantidad` CHECK ((`cantidad` between 1 and 999))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 

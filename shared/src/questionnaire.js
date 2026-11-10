@@ -75,6 +75,9 @@ export function findQuestionnaireProblems(questions) {
     if (!categories.includes(question.category)) {
       problems.push(`La pregunta "${question.id}" tiene una categoría desconocida: "${question.category}".`);
     }
+    if (question.allowQuantity && question.type === QUESTION_TYPE.MATRIX) {
+      problems.push(`La pregunta "${question.id}" es de matriz y no admite cantidades (permite_cantidad debe ser 0).`);
+    }
     if (question.type === QUESTION_TYPE.MATRIX) {
       problems.push(...findMatrixProblems(question));
     } else {
@@ -104,6 +107,9 @@ export function toPublicQuestionnaire(questions) {
     };
     if (question.subtitle) {
       publicQuestion.subtitle = question.subtitle;
+    }
+    if (question.allowQuantity && question.type !== QUESTION_TYPE.MATRIX) {
+      publicQuestion.allowQuantity = true;
     }
     if (question.type === QUESTION_TYPE.MATRIX) {
       publicQuestion.columns = question.columns.map(labelOnly);

@@ -17,7 +17,7 @@ const MENSAJES_REFERENCIA = Object.freeze({
 });
 
 /**
- * Servicio principal: guarda la participación con sus respuestas, calcula los resultados y envía el correo.
+ * Servicio principal: guarda la participación con sus respuestas y cantidades, calcula los resultados y envía el correo.
  *
  * Orden de las operaciones:
  *   1. Confirmar que país, estado, municipio, unidad y escuela existen y son consistentes entre sí.
@@ -52,7 +52,7 @@ export function createParticipacionesService({ repositories, cuestionarioService
   return {
     /**
      * @param {object} datos Datos ya validados por el middleware (ver participacion.validator.js).
-     * @param {{questions: object[], indice: Map}} cuestionario El cuestionario con el que se validó (req.cuestionario).
+     * @param {{id: number, questions: object[], indice: Map}} cuestionario El cuestionario elegido con el que se validó (req.cuestionario).
      * @returns {Promise<{results: object, email: {state: string, to: string}}>}
      * @throws {import('../utils/errors.js').HttpError} 400 si las referencias del catálogo no son válidas.
      */
@@ -66,7 +66,7 @@ export function createParticipacionesService({ repositories, cuestionarioService
       }
 
       const results = calculateFootprint(datos.answers, cuestionario.questions);
-      const respuestas = cuestionarioService.mapearRespuestas(datos.answers, cuestionario);
+      const respuestas = cuestionarioService.mapearRespuestas(datos.answers, datos.quantities, cuestionario);
 
       // El límite por destinatario se cobra antes de guardar, para que el correo entre a la cola junto con la participación.
       const correoPermitido = recipientLimiter.tryConsume(datos.correo);
@@ -74,6 +74,7 @@ export function createParticipacionesService({ repositories, cuestionarioService
       try {
         await repositories.participaciones.guardar({
           participacion: {
+            idCuestionario: cuestionario.id,
             nombre: datos.nombre,
             apellidos: datos.apellidos,
             correo: datos.correo,

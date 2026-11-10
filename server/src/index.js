@@ -74,12 +74,12 @@ const cuestionario = createCuestionarioService({
   cacheMs: config.questionnaireCacheMs,
 });
 
-// El cuestionario (preguntas, opciones y pesos) vive en MySQL: debe existir y estar completo para poder calcular.
+// Los cuestionarios (preguntas, opciones y pesos) viven en MySQL: deben existir y estar completos para poder calcular.
 const problemasCuestionario = await cuestionario.cargar();
 if (problemasCuestionario.length > 0) {
   await pool.end().catch(() => {});
   exitWith(
-    `El cuestionario guardado en MySQL no se puede usar:\n - ${problemasCuestionario.join('\n - ')}\n` +
+    `Los cuestionarios guardados en MySQL no se pueden usar:\n - ${problemasCuestionario.join('\n - ')}\n` +
       'Si es una base nueva, importa database/datos-iniciales.sql'
   );
 }

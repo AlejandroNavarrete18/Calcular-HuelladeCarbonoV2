@@ -4,8 +4,25 @@ import OptionsQuestion from './OptionsQuestion.jsx';
 import MatrixQuestion from './MatrixQuestion.jsx';
 
 // Título, subtítulo y cuerpo de una pregunta (tabla o lista de opciones según su tipo)
-export default function QuestionCard({ question, answer, onSelectOption, onSelectCell }) {
-  let body = <OptionsQuestion question={question} answer={answer} onSelect={onSelectOption} />;
+export default function QuestionCard({
+  question,
+  answer,
+  quantities,
+  onSelectOption,
+  onSelectCell,
+  onQuantityChange,
+  onQuantityCommit,
+}) {
+  let body = (
+    <OptionsQuestion
+      question={question}
+      answer={answer}
+      quantities={quantities}
+      onSelect={onSelectOption}
+      onQuantityChange={onQuantityChange}
+      onQuantityCommit={onQuantityCommit}
+    />
+  );
   if (question.type === QUESTION_TYPE.MATRIX) {
     body = <MatrixQuestion question={question} answer={answer} onSelectCell={onSelectCell} />;
   }

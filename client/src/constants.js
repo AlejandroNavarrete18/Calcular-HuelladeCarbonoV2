@@ -4,9 +4,16 @@
 export const SCREENS = Object.freeze({
   INTRO: 'intro',
   THANKS: 'thanks',
+  SELECT: 'select', // elegir cuestionario (hogar o lugar de trabajo)
   QUIZ: 'quiz',
   CONTACT: 'contact',
   RESULTS: 'results',
+});
+
+// Claves de los cuestionarios; deben coincidir con `cuestionarios.clave` en la base de datos.
+export const QUESTIONNAIRE_KEY = Object.freeze({
+  HOME: 'hogar',
+  WORK: 'trabajo',
 });
 
 // Estado del correo, tal como lo informa el servidor al guardar la participación.

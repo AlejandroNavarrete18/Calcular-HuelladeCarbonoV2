@@ -5,6 +5,14 @@ export { calculateFootprint, rebuildFootprint, COMMUTE_QUESTIONS } from './calcu
 export { isQuestionAnswered, areAllQuestionsAnswered, getAnswerErrors } from './answers.js';
 export { findQuestionnaireProblems, toPublicQuestionnaire } from './questionnaire.js';
 export {
+  QUANTITY_LIMITS,
+  allowsQuantity,
+  buildQuantities,
+  normalizeQuantity,
+  optionAllowsQuantity,
+  resolveQuantities,
+} from './quantities.js';
+export {
   MEXICO_CODE,
   OTHER_INSTITUTION,
   PARTICIPANT_FIELDS,

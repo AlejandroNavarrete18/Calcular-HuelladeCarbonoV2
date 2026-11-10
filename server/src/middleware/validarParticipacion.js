@@ -1,17 +1,32 @@
 import { validateParticipationRequest } from '../validators/participacion.validator.js';
 
+const CUESTIONARIO_DESCONOCIDO = Object.freeze({
+  ok: false,
+  code: 'VALIDATION_ERROR',
+  message: 'Elige el cuestionario que contestaste para ver tus resultados.',
+  errors: [{ field: 'cuestionario', message: 'El cuestionario seleccionado no existe.' }],
+});
+
 /**
  * Rechaza con 400 Bad Request cualquier solicitud con datos faltantes o inválidos.
- * Si todo está bien, deja los datos limpios en `req.participacion` y el cuestionario con el que se
- * validaron en `req.cuestionario` (el servicio usa ESA misma instantánea para calcular y guardar).
+ * Si todo está bien, deja los datos limpios en `req.participacion` y el cuestionario elegido (hogar, trabajo...) con el
+ * que se validaron en `req.cuestionario` (el servicio usa ESA misma instantánea para calcular y guardar).
  *
  * Es la barrera del servidor: aunque alguien se salte el navegador, no recibe resultados ni se guarda nada.
  *
- * @param {{cuestionarioService: {obtener: () => Promise<{version: string, questions: object[]}>}}} deps
+ * @param {{cuestionarioService: {obtener: (clave: string) => Promise<{version: string, questions: object[]}|undefined>}}} deps
  */
 export function createValidarParticipacion({ cuestionarioService }) {
   return async function validarParticipacion(req, res, next) {
-    const cuestionario = await cuestionarioService.obtener();
+    const clave = req.body?.cuestionario;
+    let cuestionario;
+    if (typeof clave === 'string') {
+      cuestionario = await cuestionarioService.obtener(clave);
+    }
+    if (!cuestionario) {
+      return res.status(400).json(CUESTIONARIO_DESCONOCIDO);
+    }
+
     const parsed = validateParticipationRequest(req.body, cuestionario.questions);
 
     if (!parsed.ok) {

@@ -40,10 +40,18 @@ function SubmitContent({ sending }) {
  * Formulario final (OBLIGATORIO): todos los campos deben estar completos y válidos.
  * Mientras falte algo, el botón permanece bloqueado y un aviso lista lo que falta.
  * Al enviar, el servidor guarda la participación y solo entonces se muestran los resultados.
- * @param {{answers: object, questionnaireVersion: string, isQuizComplete: boolean,
- *          onBack: () => void, onSubmitted: (response: object) => void}} props
+ * @param {{answers: object, quantities: object, questionnaireKey: string, questionnaireVersion: string,
+ *          isQuizComplete: boolean, onBack: () => void, onSubmitted: (response: object) => void}} props
  */
-export default function ContactScreen({ answers, questionnaireVersion, isQuizComplete, onBack, onSubmitted }) {
+export default function ContactScreen({
+  answers,
+  quantities,
+  questionnaireKey,
+  questionnaireVersion,
+  isQuizComplete,
+  onBack,
+  onSubmitted,
+}) {
   const form = useParticipantForm();
   const catalog = useCatalog(form.values);
   const { status, errorMessage, submit } = useParticipationSubmit();
@@ -68,7 +76,7 @@ export default function ContactScreen({ answers, questionnaireVersion, isQuizCom
     if (!canSubmit) {
       return;
     }
-    const response = await submit(form.buildPayload(answers, questionnaireVersion));
+    const response = await submit(form.buildPayload({ questionnaireKey, questionnaireVersion, answers, quantities }));
     if (response) {
       onSubmitted(response);
     }
