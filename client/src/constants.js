@@ -1,4 +1,5 @@
 // constantes de la app
+export const APP_VERSION = __APP_VERSION__;
 
 //Pantallas del flujo, en orden
 export const SCREENS = Object.freeze({

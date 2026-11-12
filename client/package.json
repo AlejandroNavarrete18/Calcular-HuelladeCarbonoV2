@@ -1,6 +1,6 @@
 {
   "name": "@huella/client",
-  "version": "3.5.0",
+  "version": "2.0.4",
   "private": true,
   "type": "module",
   "description": "Interfaz web (React + Vite + Tailwind CSS) de la Calculadora de Huella de Carbono.",

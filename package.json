@@ -1,6 +1,6 @@
 {
   "name": "calcular-huella-de-carbono",
-  "version": "3.5.0",
+  "version": "2.0.4",
   "private": true,
   "type": "module",
   "description": "Calculadora de huella de carbono UAS",

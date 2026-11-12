@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { KeyRound, LayoutDashboard, LogOut, Mail, Menu, ScrollText, ShieldCheck, Users, X } from 'lucide-react';
 import { ROLES, SECCIONES } from '../constants.js';
+import { APP_VERSION } from '../../constants.js';
 import BrandLogos from './BrandLogos.jsx';
 
 const ICONS = Object.freeze({
@@ -182,7 +183,7 @@ export default function AdminLayout({ admin, section, onNavigate, onLogout, chil
           <ColorStripe className="h-1" />
           <div className="flex flex-col items-center justify-between gap-1 px-4 py-4 text-center sm:flex-row sm:px-8 sm:text-left">
             <p className="font-display text-xs font-bold uppercase tracking-[0.3em] text-gold-400">Sursum Versus</p>
-            <p className="text-xs text-navy-100/70">Universidad Autónoma de Sinaloa · Calculadora de Huella de Carbono</p>
+            <p className="text-xs text-navy-100/70">Universidad Autónoma de Sinaloa · Calculadora de Huella de Carbono · v{APP_VERSION}</p>
           </div>
         </footer>
       </div>
