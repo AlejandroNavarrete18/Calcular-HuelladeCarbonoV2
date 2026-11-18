@@ -148,6 +148,7 @@ export function validarFiltrosParticipaciones(query) {
     filtros.idUnidad = idDeQuery(query, 'idUnidad', errors);
   }
   filtros.idEscuela = idDeQuery(query, 'idEscuela', errors);
+  filtros.idCuestionario = idDeQuery(query, 'idCuestionario', errors);
 
   for (const campo of ['desde', 'hasta']) {
     const valor = parametroTexto(query, campo);

@@ -37,7 +37,7 @@ const COLUMNAS_UBICACION = `pa.nombre AS pais, es.nombre AS estado, m.nombre AS 
  * Construye el WHERE del listado a partir de los filtros ya validados.
  * Solo se agregan condiciones fijas; los valores siempre viajan como parámetros.
  */
-function construirFiltros({ busqueda, nivel, idUnidad, idEscuela, desde, hasta, correoEnviado }) {
+function construirFiltros({ busqueda, nivel, idUnidad, idEscuela, idCuestionario, desde, hasta, correoEnviado }) {
   const condiciones = [];
   const parametros = [];
 
@@ -73,6 +73,10 @@ function construirFiltros({ busqueda, nivel, idUnidad, idEscuela, desde, hasta, 
   if (correoEnviado !== undefined) {
     condiciones.push('p.correo_enviado = ?');
     parametros.push(correoEnviado);
+  }
+  if (idCuestionario) {
+    condiciones.push('p.id_cuestionario = ?');
+    parametros.push(idCuestionario);
   }
 
   return { where: armarWhere(condiciones), parametros };
@@ -112,6 +116,19 @@ export function createReportesRepository(pool) {
       );
       return filas;
     },
+    
+    // Participaciones por tipo de cuestionario
+    async porCuestionario(filtros) {
+      const { where, parametros } = construirFiltros(filtros);
+      const [catalogo] = await pool.execute('SELECT id_cuestionario AS id, nombre FROM cuestionarios ORDER BY id_cuestionario');
+      const [conteos] = await pool.execute(
+        `SELECT p.id_cuestionario AS id, COUNT(*) AS total FROM participaciones p ${where} GROUP BY p.id_cuestionario`,
+        parametros
+      );
+      const totales = new Map(conteos.map((fila) => [fila.id, fila.total]));
+      return catalogo.map((tipo) => ({ id: tipo.id, nombre: tipo.nombre, total: totales.get(tipo.id) ?? 0 }));
+    },
+
 
     // Participaciones por día.
     async porDia(filtros) {
@@ -138,15 +155,14 @@ export function createReportesRepository(pool) {
       return filas;
     },
 
-    async topEscuelas(filtros, limite) {
+    async porEscuela(filtros) {
       const { where, parametros } = construirFiltros(filtros);
       const [filas] = await pool.execute(
         `SELECT ef.id_escuela_facultad AS id, ef.nombre, ur.nombre AS unidad, COUNT(*) AS participaciones,
                 ROUND(AVG(p.total_kg), 2) AS promedioTotal
            ${FROM_ESCUELAS_UAS} ${where}
           GROUP BY ef.id_escuela_facultad, ef.nombre, ur.nombre
-          ORDER BY participaciones DESC, ef.nombre
-          LIMIT ${Number(limite)}`,
+          ORDER BY participaciones DESC, ef.nombre`,
         parametros
       );
       return filas;
@@ -176,8 +192,11 @@ export function createReportesRepository(pool) {
                 TIMESTAMPDIFF(YEAR, p.fecha_nacimiento, CURDATE()) AS edad,
                 ${COLUMNAS_UBICACION},
                 p.hogar_kg AS hogarKg, p.transporte_kg AS transporteKg, p.consumo_kg AS consumoKg,
-                p.total_kg AS totalKg, p.nivel, p.correo_enviado AS correoEnviado
-           ${FROM_PARTICIPACIONES} ${where}
+                p.total_kg AS totalKg, p.nivel, p.correo_enviado AS correoEnviado,
+                cu.nombre AS cuestionario
+           ${FROM_PARTICIPACIONES}
+           JOIN cuestionarios cu ON cu.id_cuestionario = p.id_cuestionario
+           ${where}
           ORDER BY ${columnaOrden} ${sentido}, p.id_participacion DESC
           LIMIT ${Number(porPagina)} OFFSET ${Number((pagina - 1) * porPagina)}`,
         parametros
@@ -230,15 +249,16 @@ export function createReportesRepository(pool) {
     },
 
     // Nombres de la unidad regional y la escuela elegidas en los filtros, para rotular los archivos exportados.
-    async nombresDeFiltro({ idUnidad, idEscuela }) {
+    async nombresDeFiltro({ idUnidad, idEscuela, idCuestionario }) {
       let unidad = null;
       if (typeof idUnidad === 'number') {
         unidad = idUnidad;
       }
       const [filas] = await pool.execute(
         `SELECT (SELECT nombre FROM unidades_regionales WHERE id_unidad_regional = ?) AS unidad,
-                (SELECT nombre FROM escuelas_facultades WHERE id_escuela_facultad = ?) AS escuela`,
-        [unidad, idEscuela ?? null]
+                (SELECT nombre FROM escuelas_facultades WHERE id_escuela_facultad = ?) AS escuela,
+                (SELECT nombre FROM cuestionarios WHERE id_cuestionario = ?) AS cuestionario`,
+        [unidad, idEscuela ?? null, idCuestionario ?? null]
       );
       return filas[0];
     },
@@ -262,8 +282,11 @@ export function createReportesRepository(pool) {
                 p.fecha_nacimiento AS fechaNacimiento, TIMESTAMPDIFF(YEAR, p.fecha_nacimiento, CURDATE()) AS edad,
                 ${COLUMNAS_UBICACION},
                 p.hogar_kg AS hogarKg, p.transporte_kg AS transporteKg, p.consumo_kg AS consumoKg,
-                p.total_kg AS totalKg, p.nivel, p.correo_enviado AS correoEnviado
-           ${FROM_PARTICIPACIONES} ${where}
+                p.total_kg AS totalKg, p.nivel, p.correo_enviado AS correoEnviado,
+                cu.nombre AS cuestionario
+           ${FROM_PARTICIPACIONES}
+           JOIN cuestionarios cu ON cu.id_cuestionario = p.id_cuestionario
+           ${where}
           ORDER BY ${columnaOrden} ${sentido}, p.id_participacion DESC
           LIMIT ${Number(limite) + 1}`,
         parametros

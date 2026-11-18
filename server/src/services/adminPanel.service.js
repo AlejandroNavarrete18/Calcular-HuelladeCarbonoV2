@@ -9,7 +9,6 @@ import { hashPassword } from '../utils/passwords.js';
 
 const NIVELES = ['bajo', 'medio', 'alto', 'muy_alto'];
 const DIAS_SERIE_POR_DEFECTO = 30;
-const TOP_ESCUELAS = 10;
 const UN_DIA_MS = 24 * 60 * 60 * 1000;
 
 // Formatos de exportación: tipo de contenido, extensión y cuántas filas caben como máximo.
@@ -106,12 +105,12 @@ export function createAdminPanelService({ repositories, auditar, config }) {
       const desdeSerie = filtros.desde ?? fechaLocal(new Date(Date.now() - (DIAS_SERIE_POR_DEFECTO - 1) * UN_DIA_MS));
       const hastaSerie = filtros.hasta ?? hoy;
 
-      const [totales, niveles, porDia, porUnidad, topEscuelas, estadoCorreo] = await Promise.all([
+      const [totales, niveles, porDia, porUnidad, porEscuela, estadoCorreo] = await Promise.all([
         reportes.totales(filtros),
         reportes.porNivel(filtros),
         reportes.porDia({ ...filtros, desde: desdeSerie, hasta: hastaSerie }),
         reportes.porUnidad(filtros),
-        reportes.topEscuelas(filtros, TOP_ESCUELAS),
+        reportes.porEscuela(filtros),
         reportes.estadoCorreo(),
       ]);
 
@@ -122,7 +121,7 @@ export function createAdminPanelService({ repositories, auditar, config }) {
         niveles: NIVELES.map((nivel) => ({ nivel, total: totalPorNivel.get(nivel) ?? 0 })),
         porDia: completarDias(porDia, desdeSerie, hastaSerie),
         porUnidad,
-        topEscuelas,
+        porEscuela,
         correo: {
           enviados7d: enviosPorEstado.get('enviado') ?? 0,
           fallidos7d: enviosPorEstado.get('fallido') ?? 0,
@@ -166,11 +165,12 @@ export function createAdminPanelService({ repositories, auditar, config }) {
       if (formato === 'csv') {
         contenido = Buffer.from(armarCsv(filas), 'utf8');
       } else {
-        const [totales, niveles, nombres] = await Promise.all([reportes.totales(filtros), reportes.porNivel(filtros), reportes.nombresDeFiltro(filtros)]);
+        const [totales, niveles, cuestionarios, nombres] = await Promise.all([reportes.totales(filtros),reportes.porNivel(filtros),reportes.porCuestionario(filtros),reportes.nombresDeFiltro(filtros),
+        ]);
         const totalPorNivel = new Map(niveles.map((fila) => [fila.nivel, fila.total]));
         const datos = {
           filas,
-          resumen: { totales, niveles: NIVELES.map((nivel) => ({ nivel, total: totalPorNivel.get(nivel) ?? 0 })) },
+          resumen: { totales, niveles: NIVELES.map((nivel) => ({ nivel, total: totalPorNivel.get(nivel) ?? 0 })), cuestionarios },
           filtrosTexto: describirFiltros(filtros, nombres),
           generadoPor: admin.nombre,
           generadoEn: fechaHoraLegible(),

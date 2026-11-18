@@ -4,17 +4,17 @@ import { Leaf, House, Car, ShoppingBag, ArrowRight } from 'lucide-react';
 const FACTORS = [
   {
     icon: House,
-    title: 'Hogar',
+    title: 'En el hogar',
     text: 'Los aparatos, el gas y los focos consumen energía, y producirla libera CO₂.',
   },
   {
     icon: Car,
-    title: 'Transporte',
+    title: 'Al Transportarte',
     text: 'Cada trayecto en auto, camión o avión quema combustible y emite gases.',
   },
   {
     icon: ShoppingBag,
-    title: 'Consumo',
+    title: 'Al consumir',
     text: 'Lo que comes, usas y compras gasta recursos y energía al producirse.',
   },
 ];
@@ -51,7 +51,7 @@ export default function IntroScreen({ onStart }) {
         </p>
 
         <h2 className="mt-8 font-display text-sm font-bold tracking-[0.15em] uppercase text-gold-300">
-          Por qué te preguntamos esto
+          ¿Por qué conocer tu huella de carbono?
         </h2>
         <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
           {FACTORS.map(({ icon: Icon, title, text }, index) => (

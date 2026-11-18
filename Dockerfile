@@ -11,7 +11,7 @@ RUN npm ci
 
 COPY shared shared
 COPY client client
-RUN npm run build
+RUN VITE_API_URL=/huella_carbono npm run build
 
 FROM node:22-alpine AS runtime
 ENV NODE_ENV=production \

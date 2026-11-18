@@ -2,7 +2,7 @@ import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 
 export const COOKIE_NAME = 'huella_admin';
 // La cookie solo viaja hacia la API del panel, no hacia el resto del sitio.
-export const COOKIE_PATH = '/api/admin';
+export const COOKIE_PATH = process.env.ADMIN_COOKIE_PATH || '/api/admin';
 
 const TOKEN_BYTES = 32;
 // Largo en texto (base64url) de un token de TOKEN_BYTES bytes.

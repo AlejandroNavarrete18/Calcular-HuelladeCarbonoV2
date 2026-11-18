@@ -211,6 +211,10 @@ function agregarHojaResumen(libro, { resumen, filtrosTexto, generadoPor, generad
     'Por nivel de impacto',
     resumen.niveles.map((item) => [ETIQUETA_NIVEL[item.nivel], item.total, '#,##0'])
   );
+  bloque(
+    'Por tipo de cuestionario',
+    resumen.cuestionarios.map((item) => [item.nombre, item.total, '#,##0'])
+  );
   bloque('Correo', [
     ['Correos enviados', resumen.totales.correosEnviados, '#,##0'],
     ['Sin enviar', resumen.totales.participaciones - resumen.totales.correosEnviados, '#,##0'],

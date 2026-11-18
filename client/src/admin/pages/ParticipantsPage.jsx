@@ -6,7 +6,7 @@ import { fetchEscuelas, fetchUnidadesRegionales } from '../../services/catalogAp
 import { descargarExportacion, guardarArchivo, loaders, toQuery } from '../adminApi.js';
 import { NIVELES, PAGE_SIZE } from '../constants.js';
 import { errorMessage } from '../errors.js';
-import { formatDateTime, formatInteger, formatKg } from '../format.js';
+import { formatDate, formatInteger, formatKg, formatTime } from '../format.js';
 import { useResend } from '../useResend.js';
 import AdminSelect from '../components/AdminSelect.jsx';
 import AlertMessage from '../components/AlertMessage.jsx';
@@ -32,7 +32,7 @@ const ORDERS = Object.freeze({
   nombre: { orden: 'nombre', direccion: 'asc', label: 'Nombre (A a Z)' },
 });
 
-const EMPTY_FILTERS = Object.freeze({ busqueda: '', nivel: '', idUnidad: '', idEscuela: '', desde: '', hasta: '', correoEnviado: '' });
+const EMPTY_FILTERS = Object.freeze({ busqueda: '', nivel: '', idUnidad: '', idEscuela: '', idCuestionario: '', desde: '', hasta: '', correoEnviado: '' });
 
 const ALL = [{ value: '', label: 'Todos' }];
 
@@ -118,17 +118,27 @@ export default function ParticipantsPage({ admin }) {
   };
 
   const columns = [
-    { key: 'fecha', header: 'Fecha', render: (row) => <span className="whitespace-nowrap">{formatDateTime(row.creadoEn)}</span> },
+    {
+      key: 'fecha',
+      header: 'Fecha',
+      render: (row) => (
+        <>
+          <p className="whitespace-nowrap">{formatDate(row.creadoEn)}</p>
+          <p className="whitespace-nowrap text-xs text-muted">{formatTime(row.creadoEn)}</p>
+        </>
+      ),
+    },
     {
       key: 'persona',
       header: 'Persona',
       mobileTitle: true,
+      className: 'min-w-[13rem]',
       render: (row) => (
         <>
           <p className="font-semibold text-ink">
             {row.nombre} {row.apellidos}
           </p>
-          <p className="break-all text-xs text-muted">{row.correo}</p>
+          <p className="text-xs text-muted [overflow-wrap:anywhere]">{row.correo}</p>
         </>
       ),
     },
@@ -142,8 +152,18 @@ export default function ParticipantsPage({ admin }) {
         </>
       ),
     },
-    { key: 'total', header: 'Huella', className: 'whitespace-nowrap', render: (row) => <strong className="text-navy-900">{formatKg(row.totalKg)}</strong> },
-    { key: 'nivel', header: 'Nivel', render: (row) => <LevelBadge nivel={row.nivel} /> },
+    { key: 'cuestionario', header: 'Tipo de cuestionario', render: (row) => row.cuestionario },
+    {
+      key: 'total',
+      header: 'Huella',
+      className: 'whitespace-nowrap',
+      render: (row) => (
+        <div className="flex flex-col items-start gap-1">
+          <strong className="text-navy-900">{formatKg(row.totalKg)}</strong>
+          <LevelBadge nivel={row.nivel} />
+        </div>
+      ),
+    },
     {
       key: 'correo',
       header: 'Correo',
@@ -157,9 +177,10 @@ export default function ParticipantsPage({ admin }) {
     {
       key: 'ver',
       header: '',
+      className: 'whitespace-nowrap',
       render: (row) => (
-        <div className="flex items-center gap-2">
-          <button type="button" onClick={() => setSelectedId(row.id)} aria-label={`Ver participación ${row.id}`} className="btn-ghost btn-sm">
+        <div className="mx-auto flex w-max flex-col items-stretch gap-1.5">
+          <button type="button" onClick={() => setSelectedId(row.id)} aria-label={`Ver participación ${row.id}`} className="btn-ghost btn-sm min-w-[6.5rem] justify-center">
             <Eye className="w-4 h-4" aria-hidden="true" />
             Ver
           </button>
@@ -169,7 +190,7 @@ export default function ParticipantsPage({ admin }) {
               disabled={resend.running || resend.starting}
               onClick={() => resend.start({ modo: 'ids', ids: [row.id] })}
               aria-label={`Reenviar correo de la participación ${row.id}`}
-              className="btn-ghost btn-sm"
+              className="btn-ghost btn-sm min-w-[6.5rem] justify-center"
             >
               <Send className="w-4 h-4" aria-hidden="true" />
               Reenviar
@@ -187,7 +208,7 @@ export default function ParticipantsPage({ admin }) {
   const orderOptions = Object.entries(ORDERS).map(([value, item]) => ({ value, label: item.label }));
 
   const activeFilters = Object.values(filters).filter(Boolean).length;
-
+  const quizOptions = [...ALL, { value: '1', label: 'Cuestionario del Hogar' }, { value: '2', label: 'Cuestionario del Lugar de Trabajo' }];
   return (
     <>
       <PageHeader title="Participaciones" description="Datos personales protegidos: cada consulta de detalle y cada exportación queda registrada en la bitácora.">
@@ -255,17 +276,10 @@ export default function ParticipantsPage({ admin }) {
             </div>
           </div>
           <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <AdminSelect
-              id="orden"
-              label="Ordenar por"
-              value={order}
-              options={orderOptions}
-              onChange={(event) => {
-                setOrder(event.target.value);
-                setPage(1);
-              }}
-              className="sm:min-w-56"
-            />
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <AdminSelect id="orden" label="Ordenar por" value={order} options={orderOptions} onChange={(event) => {setOrder(event.target.value); setPage(1); }} className="sm:min-w-56"/>
+              <AdminSelect id="idCuestionario" label="Tipo de cuestionario" value={filters.idCuestionario} options={quizOptions} onChange={setFilter('idCuestionario')} className="sm:min-w-64"/>
+            </div>
             <button type="button" className="btn-ghost btn-sm" onClick={clearFilters}>
               Limpiar filtros
             </button>
@@ -277,7 +291,7 @@ export default function ParticipantsPage({ admin }) {
         <DataState status={status} onRetry={reload}>
           {data && (
             <>
-              <DataTable columns={columns} rows={data.items} rowKey={(row) => row.id} emptyText="No hay participaciones con estos filtros." />
+              <DataTable compact columns={columns} rows={data.items} rowKey={(row) => row.id} emptyText="No hay participaciones con estos filtros." />
               {data.total > 0 && <Pagination page={page} pageSize={PAGE_SIZE} total={data.total} onChange={setPage} />}
             </>
           )}

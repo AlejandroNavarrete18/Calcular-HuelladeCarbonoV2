@@ -23,6 +23,7 @@ export const COLUMNAS = Object.freeze([
   { clave: 'localidad', titulo: 'Localidad', ancho: 24, tipo: 'texto' },
   { clave: 'unidad', titulo: 'Unidad regional', ancho: 26, tipo: 'texto' },
   { clave: 'escuela', titulo: 'Escuela o institución', ancho: 40, tipo: 'texto' },
+  { clave: 'cuestionario', titulo: 'Tipo de cuestionario', ancho: 34, tipo: 'texto' },
   { clave: 'hogarKg', titulo: 'Hogar (kg CO₂e)', ancho: 16, tipo: 'kg' },
   { clave: 'transporteKg', titulo: 'Transporte (kg CO₂e)', ancho: 20, tipo: 'kg' },
   { clave: 'consumoKg', titulo: 'Consumo (kg CO₂e)', ancho: 18, tipo: 'kg' },
@@ -69,6 +70,9 @@ export function describirFiltros(filtros, nombres = {}) {
   }
   if (filtros.idEscuela) {
     lineas.push(`Escuela o facultad: ${nombres.escuela ?? `#${filtros.idEscuela}`}`);
+  }
+    if (filtros.idCuestionario) {
+    lineas.push(`Tipo de cuestionario: ${nombres.cuestionario ?? `#${filtros.idCuestionario}`}`);
   }
   return lineas;
 }

@@ -1,4 +1,5 @@
 const dateTime = new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium', timeStyle: 'short' });
+const timeOnly = new Intl.DateTimeFormat('es-MX', { timeStyle: 'short' });
 const dateOnly = new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium' });
 const shortDay = new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'short' });
 const integer = new Intl.NumberFormat('es-MX', { maximumFractionDigits: 0 });
@@ -22,6 +23,14 @@ export function formatDateTime(value) {
     return '—';
   }
   return dateTime.format(date);
+}
+
+export function formatTime(value) {
+  const date = parse(value);
+  if (!date) {
+    return '';
+  }
+  return timeOnly.format(date);
 }
 
 export function formatDate(value) {

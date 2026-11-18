@@ -44,7 +44,7 @@ export default function DashboardPage({ onNavigate }) {
 }
 
 function Content({ data, onNavigate }) {
-  const { totales, niveles, porDia, porUnidad, topEscuelas, correo } = data;
+  const { totales, niveles, porDia, porUnidad, porEscuela, correo } = data;
   let mailRate = 0;
   if (totales.participaciones > 0) {
     mailRate = Math.round((totales.correosEnviados / totales.participaciones) * 100);
@@ -94,9 +94,16 @@ function Content({ data, onNavigate }) {
           />
         </Card>
         <Card title="Escuelas y facultades con más participaciones">
-          <BarList
-            items={topEscuelas.map((item) => ({ key: item.id, label: item.nombre, value: item.participaciones, detail: `${formatKg(item.promedioTotal)} promedio` }))}
-          />
+          <div
+            role="region"
+            aria-label="Escuelas y facultades con sus participaciones"
+            tabIndex={0}
+            className="max-h-[28rem] overflow-y-auto overscroll-contain pr-2"
+          >
+            <BarList
+              items={porEscuela.map((item) => ({ key: item.id, label: item.nombre, value: item.participaciones, detail: `${formatKg(item.promedioTotal)} promedio` }))}
+            />
+          </div>
         </Card>
       </div>
 

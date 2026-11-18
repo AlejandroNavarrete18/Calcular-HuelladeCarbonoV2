@@ -49,24 +49,25 @@ const ALTO_PIE = 24;
 const formatoKg = (valor) => Number(valor).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const formatoEntero = (valor) => Number(valor).toLocaleString('es-MX', { maximumFractionDigits: 0 });
 
-// Columnas del PDF. `flex` reparte el ancho que sobra de la hoja entre las columnas de texto largo.
+// Columnas del PDF 
 const COLUMNAS_PDF = Object.freeze([
-  { titulo: 'ID', ancho: 34, alinear: 'center', valor: (fila) => String(fila.id) },
+  { titulo: 'ID', ancho: 28, alinear: 'center', valor: (fila) => String(fila.id) },
   {
     titulo: 'Fecha',
-    ancho: 64,
+    ancho: 62,
     alinear: 'left',
     valor: (fila) => textoAFechaLegible(fila.creadoEn).slice(0, 10),
     secundario: (fila) => textoAFechaLegible(fila.creadoEn).slice(11),
   },
-  { titulo: 'Persona', ancho: 168, flex: 1, alinear: 'left', valor: (fila) => `${fila.nombre} ${fila.apellidos}`, secundario: (fila) => fila.correo },
-  { titulo: 'Escuela o institución', ancho: 170, flex: 1, alinear: 'left', valor: (fila) => fila.escuela ?? '', secundario: (fila) => fila.unidad ?? '' },
+  { titulo: 'Persona', ancho: 130, flex: 1, alinear: 'left', valor: (fila) => `${fila.nombre} ${fila.apellidos}`, secundario: (fila) => fila.correo },
+  { titulo: 'Escuela o institución', ancho: 130, flex: 1, alinear: 'left', valor: (fila) => fila.escuela ?? '', secundario: (fila) => fila.unidad ?? '' },
+  { titulo: 'Tipo de\ncuestionario', ancho: 88, alinear: 'left', valor: (fila) => fila.cuestionario ?? '' },
   { titulo: 'Hogar\n(kg CO₂e)', ancho: 54, alinear: 'right', valor: (fila) => formatoKg(fila.hogarKg) },
   { titulo: 'Transporte\n(kg CO₂e)', ancho: 68, alinear: 'right', valor: (fila) => formatoKg(fila.transporteKg) },
   { titulo: 'Consumo\n(kg CO₂e)', ancho: 62, alinear: 'right', valor: (fila) => formatoKg(fila.consumoKg) },
   { titulo: 'Total\n(kg CO₂e)', ancho: 62, alinear: 'right', negrita: true, valor: (fila) => formatoKg(fila.totalKg) },
-  { titulo: 'Nivel', ancho: 58, alinear: 'center', nivel: true, valor: (fila) => ETIQUETA_NIVEL[fila.nivel] ?? '' },
-  { titulo: 'Correo', ancho: 48, alinear: 'center', valor: (fila) => ETIQUETA_SI_NO[fila.correoEnviado] ?? '' },
+  { titulo: 'Nivel', ancho: 54, alinear: 'center', nivel: true, valor: (fila) => ETIQUETA_NIVEL[fila.nivel] ?? '' },
+  { titulo: 'Correo', ancho: 44, alinear: 'center', valor: (fila) => ETIQUETA_SI_NO[fila.correoEnviado] ?? '' },
 ]);
 
 // Quita caracteres de control que podrían romper el texto del PDF.

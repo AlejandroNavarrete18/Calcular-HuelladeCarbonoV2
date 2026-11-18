@@ -27,7 +27,7 @@ function NavLink({ section, active, onNavigate, onDone }) {
 
   return (
     <a
-      href={`/admin/${section.key}`}
+      href={`${import.meta.env.BASE_URL}admin/${section.key}`}
       aria-current={ariaCurrent}
       className={`${base} ${state}`}
       onClick={(event) => {
@@ -97,6 +97,13 @@ export default function AdminLayout({ admin, section, onNavigate, onLogout, chil
     backdropState = 'opacity-100';
     MenuIcon = X;
     menuLabel = 'Cerrar menú';
+  }
+
+  // El listado de participaciones tiene muchas columnas: usa un contenedor un poco más ancho que el resto para no tener que desplazarse de lado.
+  let mainPadding = 'px-4 py-5 sm:px-8 sm:py-8';
+  let contentWidth = 'max-w-6xl';
+  if (section === 'participaciones') {
+    contentWidth = 'max-w-7xl';
   }
 
   return (
@@ -176,8 +183,8 @@ export default function AdminLayout({ admin, section, onNavigate, onLogout, chil
 
       {/* Contenido */}
       <div className="flex min-h-dvh min-w-0 flex-col pt-[calc(3.75rem+env(safe-area-inset-top))] lg:pl-[19rem] lg:pt-0">
-        <main className="min-w-0 flex-1 px-4 py-5 sm:px-8 sm:py-8">
-          <div className="mx-auto w-full min-w-0 max-w-6xl">{children}</div>
+        <main className={`min-w-0 flex-1 ${mainPadding}`}>
+          <div className={`mx-auto w-full min-w-0 ${contentWidth}`}>{children}</div>
         </main>
         <footer className="bg-navy-950 text-navy-100">
           <ColorStripe className="h-1" />

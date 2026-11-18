@@ -11,6 +11,7 @@ export default defineConfig(({ mode }) => {
   const apiTarget = env.API_PROXY_TARGET || DEFAULT_API_TARGET;
 
   return {
+    base: '/huella_carbono/',
     plugins: [react(), tailwindcss()],
     define: { __APP_VERSION__: JSON.stringify(version) },
     server: {

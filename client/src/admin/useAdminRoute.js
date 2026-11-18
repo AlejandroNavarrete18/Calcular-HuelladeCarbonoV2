@@ -1,7 +1,7 @@
 import { useCallback, useSyncExternalStore } from 'react';
 import { SECCIONES } from './constants.js';
 
-const BASE_PATH = '/admin';
+const BASE_PATH = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/admin`;
 const NAVIGATE_EVENT = 'admin:navigate';
 
 function subscribe(callback) {
@@ -17,7 +17,7 @@ const getPath = () => window.location.pathname;
 
 // Partes de la dirección: /admin/<sección>/<subsección>.
 function partsFromPath(path) {
-  return path.replace(/^\/admin\/?/, '').split('/');
+  return path.slice(BASE_PATH.length).replace(/^\//, '').split('/');
 }
 
 // Sección que corresponde a la dirección actual; cualquier otra va al resumen.

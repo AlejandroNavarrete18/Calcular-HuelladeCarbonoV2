@@ -4,14 +4,9 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 import { defineConfig, globalIgnores } from 'eslint/config';
 
-/**
- * Configuración única de ESLint para todo el monorepo.
- * Regla de estilo del proyecto: PROHIBIDO el operador ternario (`cond ? a : b`); usa `if` normales.
- */
 export default defineConfig([
   globalIgnores(['**/node_modules/', '**/dist/', '**/coverage/', 'server/.dry-run/']),
 
-  // Reglas comunes a todo el código JavaScript
   {
     files: ['**/*.{js,jsx}'],
     extends: [js.configs.recommended],
@@ -39,7 +34,6 @@ export default defineConfig([
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
     rules: {
-      // Permite variables con mayúscula usadas solo en JSX
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
     },
   },

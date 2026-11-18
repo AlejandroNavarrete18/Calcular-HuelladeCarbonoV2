@@ -12,8 +12,11 @@ import Checkbox from './Checkbox.jsx';
  * @param {string} [props.emptyText]
  * @param {{selected: Set<number>, onToggle: (row: object) => void, onToggleAll: () => void, selectable?: (row: object) => boolean}} [props.selection]
  *   Si se indica, cada fila lleva una casilla.
+ * @param {boolean} [props.compact]
+ *   Tabla ajustada para que quepa sin desplazarse de lado: menos relleno y encabezados y textos que se parten en varias líneas.
+ *   Se muestra como tabla desde 1280 px (con el menú lateral fijo, antes no hay ancho suficiente); debajo se usan tarjetas.
  */
-export default function DataTable({ columns, rows, rowKey, emptyText = 'No hay resultados.', selection }) {
+export default function DataTable({ columns, rows, rowKey, emptyText = 'No hay resultados.', selection, compact = false }) {
   if (rows.length === 0) {
     return (
       <div className="flex flex-col items-center gap-2 py-10 text-center text-muted">
@@ -21,6 +24,17 @@ export default function DataTable({ columns, rows, rowKey, emptyText = 'No hay r
         <p className="font-semibold">{emptyText}</p>
       </div>
     );
+  }
+
+  let tableVisibility = 'max-md:hidden';
+  let cardsVisibility = 'md:hidden';
+  let headerCell = 'whitespace-nowrap px-4 py-3';
+  let bodyCell = 'px-4 py-3';
+  if (compact) {
+    tableVisibility = 'max-xl:hidden';
+    cardsVisibility = 'xl:hidden';
+    headerCell = 'px-3 py-3';
+    bodyCell = 'px-3 py-3';
   }
 
   const title = columns.find((column) => column.mobileTitle);
@@ -38,7 +52,7 @@ export default function DataTable({ columns, rows, rowKey, emptyText = 'No hay r
   return (
     <>
       {/* Pantallas anchas: tabla */}
-      <div className="scroll-x max-md:hidden">
+      <div className={`scroll-x ${tableVisibility}`}>
         <table className="min-w-full text-sm">
           <thead>
             <tr className="border-b border-navy-100 bg-navy-50 text-left font-display text-[0.7rem] uppercase tracking-wider text-navy-800">
@@ -48,7 +62,7 @@ export default function DataTable({ columns, rows, rowKey, emptyText = 'No hay r
                 </th>
               )}
               {columns.map((column) => (
-                <th key={column.key} scope="col" className={`whitespace-nowrap px-4 py-3 font-bold ${column.className ?? ''}`}>
+                <th key={column.key} scope="col" className={`${headerCell} font-bold ${column.className ?? ''}`}>
                   {column.header}
                 </th>
               ))}
@@ -65,7 +79,7 @@ export default function DataTable({ columns, rows, rowKey, emptyText = 'No hay r
                   </td>
                 )}
                 {columns.map((column) => (
-                  <td key={column.key} className={`px-4 py-3 align-top ${column.className ?? ''}`}>
+                  <td key={column.key} className={`${bodyCell} align-top ${column.className ?? ''}`}>
                     {column.render(row)}
                   </td>
                 ))}
@@ -76,7 +90,7 @@ export default function DataTable({ columns, rows, rowKey, emptyText = 'No hay r
       </div>
 
       {/* Celular: una tarjeta por fila */}
-      <div className="md:hidden">
+      <div className={cardsVisibility}>
         {selection && (
           <div className="flex items-center gap-1 border-b border-navy-100 bg-navy-50 px-2 py-1 text-sm font-semibold text-navy-800">
             <Checkbox label="Elegir todas las filas" checked={allSelected} indeterminate={someSelected} onChange={selection.onToggleAll} />
