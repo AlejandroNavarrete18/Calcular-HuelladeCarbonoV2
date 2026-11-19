@@ -1,22 +1,27 @@
 import { fileURLToPath } from 'node:url';
+import { readFileSync } from 'node:fs';
 import PDFDocument from 'pdfkit';
 import { textoAFechaLegible } from '../../utils/fechas.js';
 import { ETIQUETA_NIVEL, ETIQUETA_SI_NO } from './columnas.js';
 
-const RUTA_FUENTE = fileURLToPath(new URL('../../../assets/fonts/DejaVuSans.ttf', import.meta.url));
-const RUTA_FUENTE_NEGRITA = fileURLToPath(new URL('../../../assets/fonts/DejaVuSans-Bold.ttf', import.meta.url));
-const RUTA_LOGO_UAS = fileURLToPath(new URL('../../../assets/email/logo-uas.png', import.meta.url));
-const RUTA_LOGO_BIENESTAR = fileURLToPath(new URL('../../../assets/email/logo-bienestar.png', import.meta.url));
-const RUTA_LOGO_SUSTENTABILIDAD = fileURLToPath(new URL('../../../assets/email/logo-sustentabilidad.png', import.meta.url));
+const leerAsset = (ruta) => readFileSync(fileURLToPath(new URL(ruta, import.meta.url)));
+
+// Se leen del disco una vez al cargar el módulo
+const BUFFER_FUENTE = leerAsset('../../../assets/fonts/DejaVuSans.ttf');
+const BUFFER_FUENTE_NEGRITA = leerAsset('../../../assets/fonts/DejaVuSans-Bold.ttf');
 
 // Logos del encabezado, de izquierda a derecha.
-const RUTAS_LOGOS = Object.freeze([RUTA_LOGO_BIENESTAR, RUTA_LOGO_UAS, RUTA_LOGO_SUSTENTABILIDAD]);
+const BUFFERS_LOGOS = Object.freeze([
+  leerAsset('../../../assets/email/logo-bienestar.png'),
+  leerAsset('../../../assets/email/logo-uas.png'),
+  leerAsset('../../../assets/email/logo-sustentabilidad.png'),
+]);
 const SEPARACION_LOGOS = 8;
 
 const FUENTE = 'Sans';
 const FUENTE_NEGRITA = 'Sans-Bold';
 
-// Paleta institucional (la misma de la calculadora).
+// Paleta institucional
 const COLOR = Object.freeze({
   navy950: '#071A3B',
   navy900: '#0A2352',
@@ -45,29 +50,36 @@ const MARGEN_INFERIOR = 40;
 const PADDING_CELDA = 4;
 const ALTO_ENCABEZADO_TABLA = 28;
 const ALTO_PIE = 24;
+const ANCHO_ID_MINIMO = 30;
+
+// En vez de ceder cada N filas, se cede cuando el turno actual ya gasto este presupuesto de tiempo.
+const PRESUPUESTO_TURNO_MS = 12;
+const cederTurno = () => new Promise((resolver) => setImmediate(resolver));
 
 const formatoKg = (valor) => Number(valor).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const formatoEntero = (valor) => Number(valor).toLocaleString('es-MX', { maximumFractionDigits: 0 });
 
-// Columnas del PDF 
+// Columnas del PDF.
+//`multilinea`: el texto puede ocupar varias líneas, así que hay que medirlo
+//Las demás siempre ocupan una línea y no se miden
 const COLUMNAS_PDF = Object.freeze([
-  { titulo: 'ID', ancho: 28, alinear: 'center', valor: (fila) => String(fila.id) },
+  { titulo: 'ID', ancho: ANCHO_ID_MINIMO, id: true, alinear: 'center', valor: (fila) => String(fila.id) },
   {
     titulo: 'Fecha',
-    ancho: 62,
+    ancho: 60,
     alinear: 'left',
     valor: (fila) => textoAFechaLegible(fila.creadoEn).slice(0, 10),
     secundario: (fila) => textoAFechaLegible(fila.creadoEn).slice(11),
   },
-  { titulo: 'Persona', ancho: 130, flex: 1, alinear: 'left', valor: (fila) => `${fila.nombre} ${fila.apellidos}`, secundario: (fila) => fila.correo },
-  { titulo: 'Escuela o institución', ancho: 130, flex: 1, alinear: 'left', valor: (fila) => fila.escuela ?? '', secundario: (fila) => fila.unidad ?? '' },
-  { titulo: 'Tipo de\ncuestionario', ancho: 88, alinear: 'left', valor: (fila) => fila.cuestionario ?? '' },
-  { titulo: 'Hogar\n(kg CO₂e)', ancho: 54, alinear: 'right', valor: (fila) => formatoKg(fila.hogarKg) },
-  { titulo: 'Transporte\n(kg CO₂e)', ancho: 68, alinear: 'right', valor: (fila) => formatoKg(fila.transporteKg) },
-  { titulo: 'Consumo\n(kg CO₂e)', ancho: 62, alinear: 'right', valor: (fila) => formatoKg(fila.consumoKg) },
+  { titulo: 'Persona', ancho: 110, flex: 1, multilinea: true, alinear: 'left', valor: (fila) => `${fila.nombre} ${fila.apellidos}`, secundario: (fila) => fila.correo },
+  { titulo: 'Escuela o institución', ancho: 110, flex: 1, multilinea: true, alinear: 'left', valor: (fila) => fila.escuela ?? '', secundario: (fila) => fila.unidad ?? '' },
+  { titulo: 'Tipo de\ncuestionario', ancho: 84, multilinea: true, alinear: 'left', valor: (fila) => fila.cuestionario ?? '' },
+  { titulo: 'Hogar\n(kg CO₂e)', ancho: 56, alinear: 'right', valor: (fila) => formatoKg(fila.hogarKg) },
+  { titulo: 'Transporte\n(kg CO₂e)', ancho: 64, alinear: 'right', valor: (fila) => formatoKg(fila.transporteKg) },
+  { titulo: 'Consumo\n(kg CO₂e)', ancho: 58, alinear: 'right', valor: (fila) => formatoKg(fila.consumoKg) },
   { titulo: 'Total\n(kg CO₂e)', ancho: 62, alinear: 'right', negrita: true, valor: (fila) => formatoKg(fila.totalKg) },
-  { titulo: 'Nivel', ancho: 54, alinear: 'center', nivel: true, valor: (fila) => ETIQUETA_NIVEL[fila.nivel] ?? '' },
-  { titulo: 'Correo', ancho: 44, alinear: 'center', valor: (fila) => ETIQUETA_SI_NO[fila.correoEnviado] ?? '' },
+  { titulo: 'Nivel', ancho: 50, alinear: 'center', nivel: true, valor: (fila) => ETIQUETA_NIVEL[fila.nivel] ?? '' },
+  { titulo: 'Correo', ancho: 40, alinear: 'center', valor: (fila) => ETIQUETA_SI_NO[fila.correoEnviado] ?? '' },
 ]);
 
 // Quita caracteres de control que podrían romper el texto del PDF.
@@ -75,12 +87,13 @@ const COLUMNAS_PDF = Object.freeze([
 const limpiar = (texto) => String(texto ?? '').replace(/[\u0000-\u0008\u000B-\u001F\u007F]/g, ' ');
 
 // Reparte el ancho útil de la hoja entre las columnas.
-function calcularColumnas(anchoUtil) {
-  const fijo = COLUMNAS_PDF.reduce((suma, columna) => suma + columna.ancho, 0);
+function calcularColumnas(anchoUtil, anchoId) {
+  const base = COLUMNAS_PDF.map((columna) => ({ ...columna, ancho: columna.id ? anchoId : columna.ancho }));
+  const fijo = base.reduce((suma, columna) => suma + columna.ancho, 0);
   const sobrante = anchoUtil - fijo;
-  const pesoTotal = COLUMNAS_PDF.reduce((suma, columna) => suma + (columna.flex ?? 0), 0);
+  const pesoTotal = base.reduce((suma, columna) => suma + (columna.flex ?? 0), 0);
   let x = MARGEN;
-  return COLUMNAS_PDF.map((columna) => {
+  return base.map((columna) => {
     let ancho = columna.ancho;
     if (columna.flex) {
       ancho += (sobrante * columna.flex) / pesoTotal;
@@ -89,6 +102,21 @@ function calcularColumnas(anchoUtil) {
     x += ancho;
     return posicion;
   });
+}
+
+//textos repetidos se miden una sola vez por documento.
+function crearMedidor(doc) {
+  const cache = new Map();
+  return (texto, fuente, tamano, ancho) => {
+    const clave = `${fuente}|${tamano}|${ancho}|${texto}`;
+    let alto = cache.get(clave);
+    if (alto === undefined) {
+      doc.font(fuente).fontSize(tamano);
+      alto = doc.heightOfString(texto, { width: ancho });
+      cache.set(clave, alto);
+    }
+    return alto;
+  };
 }
 
 function dibujarFranja(doc) {
@@ -102,7 +130,7 @@ function dibujarFranja(doc) {
  * Encabezado de cada página. La primera lleva logos grandes y título; las demás, una versión compacta para dejar
  * más espacio a la tabla. Devuelve la posición vertical donde puede empezar el contenido.
  */
-function dibujarEncabezado(doc, { compacto, generadoEn }) {
+function dibujarEncabezado(doc, { compacto, generadoEn, logos }) {
   dibujarFranja(doc);
   let altoLogo = 42;
   if (compacto) {
@@ -112,8 +140,7 @@ function dibujarEncabezado(doc, { compacto, generadoEn }) {
 
   // Los logos se colocan uno tras otro en la misma fila; el ancho de cada uno sale de la proporción real de su imagen.
   let xLogo = MARGEN;
-  for (const ruta of RUTAS_LOGOS) {
-    const imagen = doc.openImage(ruta);
+  for (const imagen of logos) {
     doc.image(imagen, xLogo, y, { height: altoLogo });
     xLogo += (imagen.width / imagen.height) * altoLogo + SEPARACION_LOGOS;
   }
@@ -139,7 +166,7 @@ function dibujarEncabezado(doc, { compacto, generadoEn }) {
   return yLinea + 10;
 }
 
-// Tarjetas con los totales del periodo y la barra de niveles. Devuelve la posición vertical siguiente.
+// Tarjetas con los totales del periodo y la barra de niveles
 function dibujarResumen(doc, y, resumen) {
   const anchoUtil = doc.page.width - MARGEN * 2;
   const separacion = 8;
@@ -192,7 +219,7 @@ function dibujarResumen(doc, y, resumen) {
   return yTramo + 32;
 }
 
-// Línea con los filtros aplicados y avisos (como "mostrando solo las primeras N filas").
+// Línea con los filtros aplicados y avisos
 function dibujarNotas(doc, y, { filtrosTexto, truncado, limite }) {
   const anchoUtil = doc.page.width - MARGEN * 2;
   let texto = 'Filtros: ninguno (todas las participaciones)';
@@ -232,67 +259,82 @@ function dibujarEncabezadoTabla(doc, columnas, y) {
   return y + ALTO_ENCABEZADO_TABLA;
 }
 
-// Alto que necesita una fila: el de su celda con más líneas.
-function medirFila(doc, columnas, fila) {
+/**
+ * Solo las columnas `multilinea` se miden de verdad
+ */
+function prepararFila(columnas, fila, medir, alturas) {
   let maximo = 0;
-  for (const columna of columnas) {
+  const celdas = columnas.map((columna) => {
+    if (columna.nivel) {
+      maximo = Math.max(maximo, 12);
+      return { principal: columna.valor(fila) };
+    }
     const anchoTexto = columna.ancho - PADDING_CELDA * 2;
-    let alto = 12;
-    if (!columna.nivel) {
-      doc.font(FUENTE).fontSize(8);
-      alto = doc.heightOfString(limpiar(columna.valor(fila)) || ' ', { width: anchoTexto });
-      if (columna.secundario) {
-        doc.font(FUENTE).fontSize(6.5);
-        alto += doc.heightOfString(limpiar(columna.secundario(fila)) || ' ', { width: anchoTexto }) + 1;
+    const principal = limpiar(columna.valor(fila));
+    let altoPrincipal = alturas.linea;
+    if (columna.multilinea) {
+      altoPrincipal = medir(principal || ' ', FUENTE, 8, anchoTexto);
+    }
+    let alto = altoPrincipal;
+    let secundario = null;
+    if (columna.secundario) {
+      secundario = limpiar(columna.secundario(fila));
+      let altoSecundario = alturas.lineaSecundaria;
+      if (columna.multilinea) {
+        altoSecundario = medir(secundario || ' ', FUENTE, 6.5, anchoTexto);
       }
+      alto += altoSecundario + 1;
     }
     maximo = Math.max(maximo, alto);
-  }
-  return Math.max(maximo + 8, 20);
+    return { principal, secundario, altoPrincipal };
+  });
+  return { celdas, alto: Math.max(maximo + 8, 20) };
 }
 
-function dibujarFila(doc, columnas, fila, y, alto, franja) {
+function dibujarFila(doc, columnas, fila, preparada, y, franja) {
   const anchoUtil = doc.page.width - MARGEN * 2;
+  const alto = preparada.alto;
   if (franja) {
     doc.rect(MARGEN, y, anchoUtil, alto).fill(COLOR.navy50);
   }
   doc.moveTo(MARGEN, y + alto).lineTo(MARGEN + anchoUtil, y + alto).lineWidth(0.4).strokeColor(COLOR.navy100).stroke();
 
-  for (const columna of columnas) {
+  columnas.forEach((columna, indice) => {
+    const celda = preparada.celdas[indice];
     const anchoTexto = columna.ancho - PADDING_CELDA * 2;
     const x = columna.x + PADDING_CELDA;
     if (columna.nivel) {
       const colores = COLOR_NIVEL[fila.nivel] ?? COLOR_NIVEL.bajo;
-      const etiqueta = columna.valor(fila);
       doc.roundedRect(x, y + 3, anchoTexto, 12, 6).fill(colores.fondo);
       doc.font(FUENTE_NEGRITA).fontSize(7).fillColor(colores.texto);
-      doc.text(etiqueta, x, y + 6, { width: anchoTexto, align: 'center', lineBreak: false });
-      continue;
+      doc.text(celda.principal, x, y + 6, { width: anchoTexto, align: 'center', lineBreak: false });
+      return;
     }
     let fuente = FUENTE;
     if (columna.negrita) {
       fuente = FUENTE_NEGRITA;
     }
+    // Las columnas de una sola línea no necesitan que pdfkit calcule saltos de línea.
+    const opciones = { width: anchoTexto, align: columna.alinear, lineBreak: Boolean(columna.multilinea) };
     doc.font(fuente).fontSize(8).fillColor(COLOR.tinta);
-    const texto = limpiar(columna.valor(fila));
-    doc.text(texto, x, y + 4, { width: anchoTexto, align: columna.alinear });
-    if (columna.secundario) {
-      const altoPrincipal = doc.heightOfString(texto || ' ', { width: anchoTexto });
+    doc.text(celda.principal, x, y + 4, opciones);
+    if (celda.secundario !== null) {
       doc.font(FUENTE).fontSize(6.5).fillColor(COLOR.tenue);
-      doc.text(limpiar(columna.secundario(fila)), x, y + 5 + altoPrincipal, { width: anchoTexto, align: columna.alinear });
+      doc.text(celda.secundario, x, y + 5 + celda.altoPrincipal, opciones);
     }
-  }
+  });
 }
 
 // Pie de todas las páginas (se dibuja al final, cuando ya se sabe cuántas hay).
 function dibujarPies(doc, { generadoPor }) {
   const { start, count } = doc.bufferedPageRange();
+  const textoPie = `Datos personales protegidos · Uso interno · Exportado por ${limpiar(generadoPor)}`;
   for (let indice = 0; indice < count; indice += 1) {
     doc.switchToPage(start + indice);
     const y = doc.page.height - ALTO_PIE;
     doc.moveTo(MARGEN, y - 6).lineTo(doc.page.width - MARGEN, y - 6).lineWidth(0.5).strokeColor(COLOR.navy100).stroke();
     doc.font(FUENTE).fontSize(7).fillColor(COLOR.tenue);
-    doc.text(`Datos personales protegidos · Uso interno · Exportado por ${limpiar(generadoPor)}`, MARGEN, y, { lineBreak: false });
+    doc.text(textoPie, MARGEN, y, { lineBreak: false });
     const numero = `Página ${indice + 1} de ${count}`;
     doc.text(numero, doc.page.width - MARGEN - doc.widthOfString(numero), y, { lineBreak: false });
   }
@@ -305,21 +347,20 @@ function dibujarPies(doc, { generadoPor }) {
  * @param {{filas: object[], resumen: object, filtrosTexto: string[], generadoPor: string, generadoEn: string, truncado: boolean, limite: number}} datos
  * @returns {Promise<Buffer>}
  */
-export function generarPdf(datos) {
+export async function generarPdf(datos) {
   const doc = new PDFDocument({
     size: 'A4',
     layout: 'landscape',
     margins: { top: MARGEN, left: MARGEN, right: MARGEN, bottom: MARGEN_INFERIOR },
     bufferPages: true,
-    font: RUTA_FUENTE,
     info: {
       Title: 'Participaciones · Calculadora de Huella de Carbono',
       Author: 'Calculadora de Huella de Carbono · UAS',
       Subject: 'Reporte de participaciones',
     },
   });
-  doc.registerFont(FUENTE, RUTA_FUENTE);
-  doc.registerFont(FUENTE_NEGRITA, RUTA_FUENTE_NEGRITA);
+  doc.registerFont(FUENTE, BUFFER_FUENTE);
+  doc.registerFont(FUENTE_NEGRITA, BUFFER_FUENTE_NEGRITA);
 
   const partes = [];
   doc.on('data', (parte) => partes.push(parte));
@@ -328,10 +369,23 @@ export function generarPdf(datos) {
     doc.on('error', rechazar);
   });
 
-  const columnas = calcularColumnas(doc.page.width - MARGEN * 2);
-  const limiteInferior = doc.page.height - MARGEN_INFERIOR;
+  // Los logos se abren y se incrustan una sola vez; las páginas solo los referencian.
+  const logos = BUFFERS_LOGOS.map((buffer) => doc.openImage(buffer));
 
-  let y = dibujarEncabezado(doc, { compacto: false, generadoEn: datos.generadoEn });
+  // El ancho de la columna ID depende del ID más grande (los dígitos de DejaVu miden lo mismo entre sí).
+  const digitosMaximos = datos.filas.reduce((maximo, fila) => Math.max(maximo, String(fila.id).length), 1);
+  doc.font(FUENTE).fontSize(8);
+  const anchoId = Math.max(ANCHO_ID_MINIMO, Math.ceil(doc.widthOfString('0'.repeat(digitosMaximos))) + PADDING_CELDA * 2 + 2);
+
+  const columnas = calcularColumnas(doc.page.width - MARGEN * 2, anchoId);
+  const limiteInferior = doc.page.height - MARGEN_INFERIOR;
+  const medir = crearMedidor(doc);
+  const alturas = {
+    linea: medir('X', FUENTE, 8, 1000),
+    lineaSecundaria: medir('X', FUENTE, 6.5, 1000),
+  };
+
+  let y = dibujarEncabezado(doc, { compacto: false, generadoEn: datos.generadoEn, logos });
   y = dibujarResumen(doc, y, datos.resumen);
   y = dibujarNotas(doc, y, datos);
 
@@ -340,16 +394,21 @@ export function generarPdf(datos) {
     doc.text('No hay participaciones con estos filtros.', MARGEN, y + 20, { width: doc.page.width - MARGEN * 2, align: 'center' });
   } else {
     y = dibujarEncabezadoTabla(doc, columnas, y);
-    datos.filas.forEach((fila, indice) => {
-      const alto = medirFila(doc, columnas, fila);
-      if (y + alto > limiteInferior) {
+    let inicioTurno = performance.now();
+    for (const [indice, fila] of datos.filas.entries()) {
+      const preparada = prepararFila(columnas, fila, medir, alturas);
+      if (y + preparada.alto > limiteInferior) {
         doc.addPage();
-        y = dibujarEncabezado(doc, { compacto: true, generadoEn: datos.generadoEn });
+        y = dibujarEncabezado(doc, { compacto: true, generadoEn: datos.generadoEn, logos });
         y = dibujarEncabezadoTabla(doc, columnas, y);
       }
-      dibujarFila(doc, columnas, fila, y, alto, indice % 2 === 1);
-      y += alto;
-    });
+      dibujarFila(doc, columnas, fila, preparada, y, indice % 2 === 1);
+      y += preparada.alto;
+      if (performance.now() - inicioTurno > PRESUPUESTO_TURNO_MS) {
+        await cederTurno();
+        inicioTurno = performance.now();
+      }
+    }
   }
 
   dibujarPies(doc, datos);
